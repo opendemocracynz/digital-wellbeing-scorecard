@@ -1,0 +1,12 @@
+{
+  "name": "digital-wellbeing-scorecard",
+  "version": "1.0.0",
+  "description": "Digital Wellbeing Scorecard MVP",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
