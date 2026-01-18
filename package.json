@@ -4,7 +4,8 @@
   "description": "Digital Wellbeing Scorecard MVP",
   "main": "index.html",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "netlify dev"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0"
