@@ -31,6 +31,50 @@ const categoryIcons = {
     "Impact": "🌍"
 };
 
+// ARCHETYPE DATA (Content & Assets)
+const archetypeDetails = {
+    1: {
+        name: 'Zombie Clickslave',
+        range: [15, 29],
+        desc: 'Driven by compulsion. Technology dictates your schedule, mood, and attention span. Immediate intervention recommended.',
+        color: 'text-red-500',
+        bg: 'bg-red-500',
+        img: '/images/level-1.png'
+    },
+    2: {
+        name: 'Unconscious Doomscroller',
+        range: [30, 44],
+        desc: 'High regret, low friction. You lose hours to screens without meaning to, but you are aware of the pain.',
+        color: 'text-orange-500',
+        bg: 'bg-orange-500',
+        img: '/images/level-2.png'
+    },
+    3: {
+        name: 'Digital Drifter',
+        range: [45, 55],
+        desc: 'Reactive and distracted. You function okay, but your attention is constantly fragmented by pings and buzzes.',
+        color: 'text-yellow-400',
+        bg: 'bg-yellow-400',
+        img: '/images/level-3.png'
+    },
+    4: {
+        name: 'Intentional Architect',
+        range: [56, 68],
+        desc: 'Systematized and proactive. You use tools to block distractions, though you still fight the occasional battle.',
+        color: 'text-blue-400',
+        bg: 'bg-blue-400',
+        img: '/images/level-4.png'
+    },
+    5: {
+        name: 'Digital Sovereign',
+        range: [69, 75],
+        desc: 'The master level. Technology is a precision instrument that serves you. You are fully present offline.',
+        color: 'text-purple-400',
+        bg: 'bg-purple-400',
+        img: '/images/level-5.png'
+    }
+};
+
 // INITIALIZATION & THEME
 function initApp() {
     // Apply Dark Mode / Gamified Theme to Body
@@ -230,22 +274,35 @@ function displayResults(archetype, totalScore) {
         gaugeContainer.innerHTML = gaugeHTML;
         resultContainer.insertBefore(gaugeContainer, header.nextSibling);
     }
+}
 
-    archetypeLevel.textContent = `LEVEL ${archetype.level} DETECTED`;
-    archetypeLevel.className = 'text-sm font-bold text-blue-500 tracking-widest uppercase mb-1';
+// Expose function to window so HTML onclick can find it
+window.updateProfileView = function(level) {
+    // We pass null for score to indicate this is just a view update, not the user's actual result
+    updateProfileCard(level, null, false);
+};
+
+function updateProfileCard(level, userScore, isUserResult) {
+    const data = archetypeDetails[level];
     
-    archetypeName.textContent = archetype.name;
-    archetypeName.className = 'text-3xl font-bold text-white mb-4';
+    // Clear previous content if needed, or just update text
+    archetypeLevel.innerHTML = `
+        <div class="flex flex-col items-center animate-fade-in">
+            <img src="${data.img}" class="w-32 h-32 rounded-full border-4 border-slate-700 shadow-2xl mb-4 bg-slate-800 object-cover">
+            <span class="${data.color} text-sm font-bold tracking-widest uppercase mb-1">LEVEL ${level}</span>
+        </div>
+    `;
     
-    totalScoreEl.classList.add('hidden'); // Hide old text score, we have the gauge now
+    archetypeName.textContent = data.name;
+    archetypeName.className = `text-3xl font-bold text-white mb-2 ${data.color}`;
     
-    // Update Subscribe Form Text to be "Gamified"
-    const formTitle = subscribeForm.previousElementSibling; // Assuming h3 is before form
-    if(formTitle) formTitle.textContent = "Lock in your Level";
+    // Use the description from data
+    totalScoreEl.textContent = data.desc;
+    totalScoreEl.className = 'text-slate-300 text-lg mb-6 leading-relaxed';
+    totalScoreEl.classList.remove('hidden');
     
-    const submitBtn = subscribeForm.querySelector('button');
-    submitBtn.textContent = "Claim Archetype Badge";
-    submitBtn.className = "w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-green-900/20 transition-all";
+    // If viewing a different level, show a "Back to my result" hint? 
+    // For MVP, we just let them explore.
 }
 
 
