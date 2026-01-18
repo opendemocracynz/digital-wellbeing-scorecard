@@ -14,7 +14,7 @@ exports.handler = async function(event, context) {
         const { email, archetype_segment, first_name } = JSON.parse(event.body);
 
         if (!email) {
-            return { statusCode: 400, body: 'Email is required' };
+            return { statusCode: 400, body: JSON.stringify({ message: 'Email is required' }) };
         }
 
         const { data, error } = await supabase
@@ -30,7 +30,7 @@ exports.handler = async function(event, context) {
         if (error) {
             // Handle potential duplicate email error
             if (error.code === '23505') { 
-                return { statusCode: 409, body: 'Email already subscribed.' };
+                return { statusCode: 409, body: JSON.stringify({ message: 'Email already subscribed.' }) };
             }
             throw error;
         }

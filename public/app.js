@@ -74,27 +74,28 @@ async function finishQuiz() {
     const totalScore = quizState.answers.reduce((acc, score) => acc + score, 0);
     const archetype = getArchetype(totalScore);
 
-    // TODO: Replace with Netlify function call
-    console.log('Submitting score to Netlify function...');
-    console.log({
-        answers: quizState.answers,
-        totalScore,
-        archetype
-    });
-    
-    // Mock response
-    displayResults(archetype, totalScore);
+    // Show loading state
+    nextBtn.textContent = 'Calculating...';
+    nextBtn.disabled = true;
 
-    // try {
-    //     const response = await fetch('/.netlify/functions/submit-score', {
-    //         method: 'POST',
-    //         body: JSON.stringify({ answers: quizState.answers })
-    //     });
-    //     const result = await response.json();
-    //     displayResults(result.archetype, result.totalScore);
-    // } catch (error) {
-    //     console.error("Error submitting score:", error);
-    // }
+    try {
+        const response = await fetch('/.netlify/functions/submit-score', {
+            method: 'POST',
+            body: JSON.stringify({ answers: quizState.answers })
+        });
+        
+        if (!response.ok) throw new Error('Submission failed');
+
+        const result = await response.json();
+        displayResults(result.archetype, result.totalScore);
+    } catch (error) {
+        console.error("Error submitting score:", error);
+        // Fallback: Show local results so the user isn't stuck
+        displayResults(archetype, totalScore);
+    } finally {
+        nextBtn.textContent = 'Finish';
+        nextBtn.disabled = false;
+    }
 }
 
 function displayResults(archetype, totalScore) {
@@ -112,30 +113,40 @@ async function handleSubscription(event) {
     const totalScore = quizState.answers.reduce((acc, score) => acc + score, 0);
     const archetype = getArchetype(totalScore);
 
+    const submitBtn = subscribeForm.querySelector('button');
+    const originalBtnText = submitBtn.textContent;
+    submitBtn.textContent = '...';
+    submitBtn.disabled = true;
+    subscribeMessage.textContent = '';
+    subscribeMessage.className = 'text-sm mt-2'; // Reset classes
 
-    // TODO: Replace with Netlify function call
-    console.log(`Subscribing ${email} with archetype segment ${archetype.level}`);
-    subscribeMessage.textContent = 'Thank you for subscribing!';
-    emailInput.value = '';
+    try {
+        const response = await fetch('/.netlify/functions/subscribe', {
+            method: 'POST',
+            body: JSON.stringify({
+                email,
+                archetype_segment: archetype.level
+            })
+        });
+        
+        const data = await response.json();
 
-    // try {
-    //     const response = await fetch('/.netlify/functions/subscribe', {
-    //         method: 'POST',
-    //         body: JSON.stringify({
-    //             email,
-    //             archetype_segment: archetype.level
-    //         })
-    //     });
-    //     if(response.ok) {
-    //         subscribeMessage.textContent = 'Thank you for subscribing!';
-    //         emailInput.value = '';
-    //     } else {
-    //         subscribeMessage.textContent = 'Something went wrong. Please try again.';
-    //     }
-    // } catch (error) {
-    //     console.error("Error subscribing:", error);
-    //     subscribeMessage.textContent = 'Something went wrong. Please try again.';
-    // }
+        if(response.ok) {
+            subscribeMessage.textContent = 'Thank you for subscribing!';
+            subscribeMessage.classList.add('text-green-600');
+            emailInput.value = '';
+        } else {
+            subscribeMessage.textContent = data.message || 'Something went wrong. Please try again.';
+            subscribeMessage.classList.add('text-red-600');
+        }
+    } catch (error) {
+        console.error("Error subscribing:", error);
+        subscribeMessage.textContent = 'Something went wrong. Please try again.';
+        subscribeMessage.classList.add('text-red-600');
+    } finally {
+        submitBtn.textContent = originalBtnText;
+        submitBtn.disabled = false;
+    }
 }
 
 
