@@ -340,6 +340,9 @@ function displayResults(archetype, totalScore) {
     // 3. Render the Main Profile Card (Defaults to user's result)
     updateProfileCard(archetype.level, totalScore, true);
     
+    // 4. Add Social Share Buttons
+    addShareButtons(archetype, totalScore);
+
     const submitBtn = subscribeForm.querySelector('button');
     submitBtn.textContent = "Claim Archetype Badge";
     submitBtn.className = "w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-green-900/20 transition-all";
@@ -438,10 +441,53 @@ function updateProfileCard(level, userScore, isUserResult) {
         }
     }
     
+    // Add "Get Full Report" Button (Payment Placeholder)
+    const nextSteps = document.getElementById('next-steps');
+    if (nextSteps && !document.getElementById('payment-btn')) {
+        const btn = document.createElement('a');
+        btn.id = 'payment-btn';
+        btn.href = `payment.html?level=${level}`;
+        btn.className = 'block w-full text-center bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg mt-6 transition-all transform hover:scale-105 uppercase tracking-widest border border-yellow-400';
+        btn.innerHTML = '🔓 Unlock Full Report <span class="text-sm opacity-80 ml-1">($9)</span>';
+        nextSteps.appendChild(btn);
+    }
+
     // If viewing a different level, show a "Back to my result" hint? 
     // For MVP, we just let them explore.
 }
 
+function addShareButtons(archetype, score) {
+    const containerId = 'share-buttons-container';
+    if (document.getElementById(containerId)) return;
+
+    const shareContainer = document.createElement('div');
+    shareContainer.id = containerId;
+    shareContainer.className = 'flex gap-3 justify-center mt-8 mb-4';
+    
+    const text = `I just scored ${score}/75 on the Digital Wellbeing Scorecard. I'm a "${archetype.name}". Find out your archetype:`;
+    const url = window.location.href;
+    
+    // LinkedIn
+    const liBtn = document.createElement('a');
+    liBtn.href = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+    liBtn.target = '_blank';
+    liBtn.className = 'flex-1 bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors text-center shadow-lg';
+    liBtn.innerHTML = 'Share on LinkedIn';
+    
+    // X / Twitter
+    const xBtn = document.createElement('a');
+    xBtn.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    xBtn.target = '_blank';
+    xBtn.className = 'flex-1 bg-black hover:bg-gray-800 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors text-center shadow-lg';
+    xBtn.innerHTML = 'Post on X';
+    
+    shareContainer.appendChild(liBtn);
+    shareContainer.appendChild(xBtn);
+    
+    // Insert after the subscribe form area
+    const nextSteps = document.getElementById('next-steps');
+    nextSteps.appendChild(shareContainer);
+}
 
 async function handleSubscription(event) {
     event.preventDefault();
@@ -461,14 +507,24 @@ async function handleSubscription(event) {
             method: 'POST',
             body: JSON.stringify({
                 email,
-                archetype_segment: archetype.level
+                archetype_segment: archetype.level,
+                total_score: totalScore
             })
         });
         
         const data = await response.json();
 
         if(response.ok) {
-            subscribeMessage.textContent = data.message;
+            // Handle Returning User Progress Message
+            if (data.status === 'updated' && data.score_diff !== undefined) {
+                let msg = data.message;
+                if (data.score_diff > 0) msg = `Welcome back! You improved by ${data.score_diff} points! 🚀`;
+                else if (data.score_diff < 0) msg = `Welcome back. Your score dropped by ${Math.abs(data.score_diff)} points.`;
+                else msg = `Welcome back. Your score is unchanged.`;
+                subscribeMessage.textContent = msg;
+            } else {
+                subscribeMessage.textContent = data.message;
+            }
             subscribeMessage.classList.add('text-green-600');
             emailInput.value = '';
         } else {
