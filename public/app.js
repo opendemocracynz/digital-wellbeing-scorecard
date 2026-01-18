@@ -19,25 +19,128 @@ const subscribeForm = document.getElementById('subscribe-form');
 const emailInput = document.getElementById('email-input');
 const subscribeMessage = document.getElementById('subscribe-message');
 
+// UI CONSTANTS
+const categoryIcons = {
+    "Agency": "⚡",
+    "Environment": "🏠",
+    "Psychology": "🧠",
+    "Systems": "⚙️",
+    "Focus": "🎯",
+    "Social": "👥",
+    "Creation": "🎨",
+    "Impact": "🌍"
+};
+
+// INITIALIZATION & THEME
+function initApp() {
+    // Apply Dark Mode / Gamified Theme to Body
+    document.body.classList.add('bg-slate-900', 'text-slate-100', 'font-sans', 'antialiased');
+    
+    // Style Containers
+    const containerClasses = ['bg-slate-800', 'p-8', 'rounded-xl', 'shadow-2xl', 'border', 'border-slate-700', 'max-w-2xl', 'w-full', 'mx-auto', 'mt-10'];
+    quizContainer.classList.add(...containerClasses);
+    resultContainer.classList.add(...containerClasses);
+
+    // Create and Show Splash Screen
+    createSplashScreen();
+}
+
+function createSplashScreen() {
+    const splash = document.createElement('div');
+    splash.id = 'splash-screen';
+    splash.className = 'fixed inset-0 bg-slate-900 flex flex-col items-center justify-center z-50';
+    splash.innerHTML = `
+        <div class="max-w-md w-full text-center p-6">
+            <div class="mb-8 relative">
+                <div class="w-24 h-24 bg-blue-500 rounded-full mx-auto opacity-20 animate-pulse absolute top-0 left-1/2 transform -translate-x-1/2"></div>
+                <div class="text-6xl relative z-10">🧬</div>
+            </div>
+            <h1 class="text-4xl font-bold mb-2 text-white tracking-tight">Digital Wellbeing<br><span class="text-blue-400">Scorecard</span></h1>
+            <p class="text-slate-400 mb-8 text-lg">Initialize system scan. Analyze your relationship with technology.</p>
+            
+            <div class="grid grid-cols-2 gap-4 mb-8 text-left bg-slate-800 p-4 rounded-lg border border-slate-700">
+                <div class="flex items-center text-slate-300"><span class="mr-2">🧠</span> Psychology</div>
+                <div class="flex items-center text-slate-300"><span class="mr-2">🏠</span> Environment</div>
+                <div class="flex items-center text-slate-300"><span class="mr-2">⚡</span> Agency</div>
+                <div class="flex items-center text-slate-300"><span class="mr-2">⚙️</span> Systems</div>
+            </div>
+
+            <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-900/50 uppercase tracking-widest">
+                Begin Assessment
+            </button>
+        </div>
+    `;
+    document.body.appendChild(splash);
+    
+    // Hide main containers initially
+    quizContainer.classList.add('hidden');
+    resultContainer.classList.add('hidden');
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+        splash.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+        setTimeout(() => {
+            splash.remove();
+            quizContainer.classList.remove('hidden');
+            renderQuestion();
+        }, 500);
+    });
+}
+
 function renderQuestion() {
     const question = quizData[quizState.currentQuestionIndex];
+    const icon = categoryIcons[question.category] || '❓';
+    
+    // Update Progress Bar (Inject if missing)
+    updateProgressBar();
+
     questionText.textContent = question.question;
-    questionCategory.textContent = question.category;
+    questionText.className = 'text-2xl font-bold mb-6 text-white';
+    
+    questionCategory.innerHTML = `<span class="text-2xl mr-2">${icon}</span> ${question.category} Scan`;
+    questionCategory.className = 'text-blue-400 text-sm font-bold uppercase tracking-wider mb-2 flex items-center';
+    
     optionsContainer.innerHTML = '';
 
     question.options.forEach(option => {
         const button = document.createElement('button');
         button.textContent = option.text;
-        button.classList.add('w-full', 'text-left', 'p-4', 'border', 'rounded-md', 'hover:bg-gray-100');
+        // Dark mode styling for options
+        button.className = 'w-full text-left p-4 border rounded-lg mb-3 transition-all duration-200 group';
+        button.classList.add('bg-slate-700', 'border-slate-600', 'text-slate-200', 'hover:bg-slate-600', 'hover:border-blue-400');
+        
         button.onclick = () => selectAnswer(option.score);
         if (quizState.answers[quizState.currentQuestionIndex] === option.score) {
-            button.classList.add('bg-blue-100', 'border-blue-500');
+            button.classList.remove('bg-slate-700', 'border-slate-600');
+            button.classList.add('bg-blue-900', 'border-blue-500', 'text-white', 'ring-1', 'ring-blue-500');
         }
         optionsContainer.appendChild(button);
     });
 
     prevBtn.disabled = quizState.currentQuestionIndex === 0;
+    
+    // Style Navigation Buttons
+    prevBtn.className = `px-6 py-2 rounded-lg font-medium ${prevBtn.disabled ? 'text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`;
     nextBtn.textContent = quizState.currentQuestionIndex === quizData.length - 1 ? 'Finish' : 'Next';
+    nextBtn.className = 'bg-blue-600 hover:bg-blue-500 text-white px-8 py-2 rounded-lg font-bold shadow-lg shadow-blue-900/20 transition-colors';
+}
+
+function updateProgressBar() {
+    let progressContainer = document.getElementById('progress-container');
+    if (!progressContainer) {
+        progressContainer = document.createElement('div');
+        progressContainer.id = 'progress-container';
+        progressContainer.className = 'w-full bg-slate-700 h-2 rounded-full mb-8 overflow-hidden';
+        quizContainer.insertBefore(progressContainer, quizContainer.firstChild);
+        
+        const bar = document.createElement('div');
+        bar.id = 'progress-bar';
+        bar.className = 'bg-blue-500 h-full transition-all duration-300 ease-out';
+        bar.style.width = '0%';
+        progressContainer.appendChild(bar);
+    }
+    
+    const progress = ((quizState.currentQuestionIndex + 1) / quizData.length) * 100;
+    document.getElementById('progress-bar').style.width = `${progress}%`;
 }
 
 function selectAnswer(score) {
@@ -101,9 +204,48 @@ async function finishQuiz() {
 function displayResults(archetype, totalScore) {
     quizContainer.classList.add('hidden');
     resultContainer.classList.remove('hidden');
-    archetypeLevel.textContent = `Level ${archetype.level}`;
+    
+    // Inject Gauge Visualization
+    const gaugeHTML = `
+        <div class="mb-8 pt-4">
+            <div class="flex justify-between text-xs text-slate-400 mb-2 uppercase tracking-wider">
+                <span>Zombie</span>
+                <span>Sovereign</span>
+            </div>
+            <div class="relative h-4 bg-slate-700 rounded-full w-full">
+                <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full opacity-50 w-full"></div>
+                <!-- Marker for User Score (15-75 range mapped to 0-100%) -->
+                <div class="absolute top-0 w-1 h-6 bg-white border-2 border-slate-900 -mt-1 transform -translate-x-1/2 transition-all duration-1000" 
+                     style="left: ${((totalScore - 15) / (75 - 15)) * 100}%"></div>
+            </div>
+            <div class="text-center mt-2 font-mono text-blue-400">${totalScore} / 75</div>
+        </div>
+    `;
+    
+    // Insert Gauge before the archetype name
+    const header = resultContainer.querySelector('h2') || resultContainer.firstElementChild;
+    if(!document.getElementById('score-gauge')) {
+        const gaugeContainer = document.createElement('div');
+        gaugeContainer.id = 'score-gauge';
+        gaugeContainer.innerHTML = gaugeHTML;
+        resultContainer.insertBefore(gaugeContainer, header.nextSibling);
+    }
+
+    archetypeLevel.textContent = `LEVEL ${archetype.level} DETECTED`;
+    archetypeLevel.className = 'text-sm font-bold text-blue-500 tracking-widest uppercase mb-1';
+    
     archetypeName.textContent = archetype.name;
-    totalScoreEl.textContent = `Your score: ${totalScore}`;
+    archetypeName.className = 'text-3xl font-bold text-white mb-4';
+    
+    totalScoreEl.classList.add('hidden'); // Hide old text score, we have the gauge now
+    
+    // Update Subscribe Form Text to be "Gamified"
+    const formTitle = subscribeForm.previousElementSibling; // Assuming h3 is before form
+    if(formTitle) formTitle.textContent = "Lock in your Level";
+    
+    const submitBtn = subscribeForm.querySelector('button');
+    submitBtn.textContent = "Claim Archetype Badge";
+    submitBtn.className = "w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-green-900/20 transition-all";
 }
 
 
@@ -155,4 +297,4 @@ prevBtn.addEventListener('click', prevQuestion);
 subscribeForm.addEventListener('submit', handleSubscription);
 
 // Initial render
-renderQuestion();
+initApp();
