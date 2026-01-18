@@ -2,7 +2,7 @@ import quizData from './quiz_data.js';
 
 const quizState = {
     currentQuestionIndex: 0,
-    answers: [],
+    answers: new Array(quizData.length).fill(0), // Initialize with 0s to maintain data alignment
 };
 
 const questionText = document.getElementById('question-text');
@@ -95,9 +95,9 @@ function createSplashScreen() {
     splash.className = 'fixed inset-0 bg-slate-900 flex flex-col items-center justify-center z-50';
     splash.innerHTML = `
         <div class="max-w-md w-full text-center p-6">
-            <div class="mb-8 relative">
-                <div class="w-24 h-24 bg-blue-500 rounded-full mx-auto opacity-20 animate-pulse absolute top-0 left-1/2 transform -translate-x-1/2"></div>
-                <div class="text-6xl relative z-10">🧬</div>
+            <div class="mb-8 relative flex justify-center items-center">
+                <div class="w-32 h-32 bg-blue-500 rounded-full opacity-20 animate-pulse absolute"></div>
+                <img src="/images/digital-wellbeing-score.png" class="w-32 h-32 object-contain relative z-10" alt="Digital Wellbeing">
             </div>
             <h1 class="text-4xl font-bold mb-2 text-white tracking-tight">Digital Wellbeing<br><span class="text-blue-400">Scorecard</span></h1>
             <p class="text-slate-400 mb-8 text-lg">Initialize system scan. Analyze your relationship with technology.</p>
@@ -109,7 +109,7 @@ function createSplashScreen() {
                 <div class="flex items-center text-slate-300"><span class="mr-2">⚙️</span> Systems</div>
             </div>
 
-            <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-900/50 uppercase tracking-widest">
+            <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-900/50 uppercase tracking-widest animate-pulse">
                 Begin Assessment
             </button>
         </div>
@@ -197,6 +197,21 @@ function nextQuestion() {
         quizState.currentQuestionIndex++;
         renderQuestion();
     } else {
+        // Check for unanswered questions (scored as 0)
+        const unansweredCount = quizState.answers.filter(score => score === 0).length;
+        
+        if (unansweredCount > 0) {
+            const proceed = confirm(`You have skipped ${unansweredCount} questions.\n\nUnanswered questions will be scored as zero (Zombie Mode). Do you want to proceed?\n\nClick OK to submit, or Cancel to go back to the missed questions.`);
+            if (!proceed) {
+                // Jump to the first unanswered question
+                const firstMissedIndex = quizState.answers.findIndex(score => score === 0);
+                if (firstMissedIndex !== -1) {
+                    quizState.currentQuestionIndex = firstMissedIndex;
+                    renderQuestion();
+                }
+                return;
+            }
+        }
         finishQuiz();
     }
 }
@@ -248,6 +263,9 @@ async function finishQuiz() {
 function displayResults(archetype, totalScore) {
     quizContainer.classList.add('hidden');
     resultContainer.classList.remove('hidden');
+    
+    // Update the profile card with the result
+    updateProfileCard(archetype.level, totalScore, true);
     
     // Inject Gauge Visualization
     const gaugeHTML = `
@@ -331,7 +349,7 @@ async function handleSubscription(event) {
         const data = await response.json();
 
         if(response.ok) {
-            subscribeMessage.textContent = 'Thank you for subscribing!';
+            subscribeMessage.textContent = data.message;
             subscribeMessage.classList.add('text-green-600');
             emailInput.value = '';
         } else {

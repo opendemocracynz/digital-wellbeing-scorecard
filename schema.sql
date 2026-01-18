@@ -31,3 +31,38 @@ CREATE POLICY "Enable insert for anyone" ON research_data
 
 CREATE POLICY "Enable insert for anyone" ON marketing_leads
     FOR INSERT WITH CHECK (true);
+
+-- UPDATE: Add submission tracking column
+ALTER TABLE marketing_leads ADD COLUMN IF NOT EXISTS submission_count INTEGER DEFAULT 1;
+
+-- RPC: Securely handle lead submission (Insert or Update)
+-- This function runs with "SECURITY DEFINER" to bypass RLS for the update logic
+CREATE OR REPLACE FUNCTION submit_lead(
+    p_email TEXT,
+    p_segment INTEGER,
+    p_first_name TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_count INTEGER;
+BEGIN
+    INSERT INTO marketing_leads (email, archetype_segment, first_name, submission_count)
+    VALUES (p_email, p_segment, p_first_name, 1)
+    ON CONFLICT (email) DO UPDATE
+    SET 
+        archetype_segment = EXCLUDED.archetype_segment,
+        submission_count = marketing_leads.submission_count + 1,
+        first_name = COALESCE(EXCLUDED.first_name, marketing_leads.first_name);
+        
+    SELECT submission_count INTO v_count FROM marketing_leads WHERE email = p_email;
+    
+    IF v_count > 1 THEN
+        RETURN jsonb_build_object('status', 'updated', 'message', 'Welcome back! We have updated your profile with your latest result.');
+    ELSE
+        RETURN jsonb_build_object('status', 'inserted', 'message', 'Thank you for subscribing!');
+    END IF;
+END;
+$$;

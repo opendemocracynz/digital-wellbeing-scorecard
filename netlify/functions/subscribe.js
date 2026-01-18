@@ -17,27 +17,18 @@ exports.handler = async function(event, context) {
             return { statusCode: 400, body: JSON.stringify({ message: 'Email is required' }) };
         }
 
-        const { data, error } = await supabase
-            .from('marketing_leads')
-            .insert([
-                { 
-                    email, 
-                    archetype_segment,
-                    first_name
-                }
-            ]);
+        // Call the secure RPC function we created in Supabase
+        const { data, error } = await supabase.rpc('submit_lead', { 
+            p_email: email, 
+            p_segment: archetype_segment, 
+            p_first_name: first_name || null
+        });
 
-        if (error) {
-            // Handle potential duplicate email error
-            if (error.code === '23505') { 
-                return { statusCode: 409, body: JSON.stringify({ message: 'Email already subscribed.' }) };
-            }
-            throw error;
-        }
+        if (error) throw error;
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ message: 'Subscription successful!' })
+            body: JSON.stringify({ message: data.message })
         };
     } catch (error) {
         return {
