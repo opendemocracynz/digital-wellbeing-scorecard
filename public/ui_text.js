@@ -30,15 +30,15 @@ const uiText = {
         "share_via": "Share via email or social media",
         "unlock_report_button": "🔓 Unlock Full Report <span class='text-sm opacity-80 ml-1'>($5)</span>",
         "viewing_profile_label": "Viewing Profile",
-        "share_message_template": "I just scored {{score}}/75 on the Digital Wellbeing Scorecard and my archetype is \\"{{archetype}}\\". Find out yours!",
-        "unanswered_warning": "You have skipped {{count}} questions.
+        "share_message_template": "I just scored \\"{{score}}\\"/75 on the Digital Wellbeing Scorecard and my archetype is \\"{{archetype}}\\". Find out yours!",
+        "unanswered_warning": "You have skipped \\"{{count}}\\" questions.
 
 Unanswered questions will be scored as zero (Zombie Mode). Do you want to proceed?
 
 Click OK to submit, or Cancel to go back to the missed questions.",
         "subscription": {
-            "welcome_back_improved": "Welcome back! You improved by {{score_diff}} points! 🚀",
-            "welcome_back_declined": "Welcome back. Your score dropped by {{score_diff}} points.",
+            "welcome_back_improved": "Welcome back! You improved by \\"{{score_diff}}\\" points! 🚀",
+            "welcome_back_declined": "Welcome back. Your score dropped by \\"{{score_diff}}\\" points.",
             "welcome_back_unchanged": "Welcome back. Your score is unchanged.",
             "error": "Something went wrong. Please try again."
         }
