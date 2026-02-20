@@ -73,6 +73,7 @@ function populateText() {
     resultContainer.querySelector('h2').textContent = uiText.results.title;
     const primaryCta = document.getElementById('primary-cta');
     primaryCta.querySelector('p:first-of-type').innerHTML = uiText.results.subscribe_cta_main;
+    primaryCta.querySelector('p:first-of-type').className = "text-xs text-slate-500 uppercase tracking-widest mb-2";
     primaryCta.querySelector('p:nth-of-type(2)').innerHTML = uiText.results.subscribe_cta_details;
     emailInput.placeholder = uiText.results.email_placeholder;
     subscribeForm.querySelector('button').textContent = uiText.results.subscribe_button;
@@ -300,9 +301,6 @@ async function finishQuiz() {
     // Show loading state
     nextBtn.textContent = uiText.quiz.calculating_button;
     nextBtn.disabled = true;
-
-    // Clear saved state
-    localStorage.removeItem(QUIZ_STORAGE_KEY);
 
     try {
         const response = await fetch('/.netlify/functions/submit-score', {
@@ -547,13 +545,17 @@ async function handleSubscription(event) {
             subscribeMessage.classList.add('text-green-600');
             emailInput.value = '';
 
+            // Clear the saved quiz state
+            localStorage.removeItem(QUIZ_STORAGE_KEY);
+
             // Hide primary CTA and show secondary CTAs
             document.getElementById('primary-cta').classList.add('hidden');
             document.getElementById('secondary-ctas').classList.remove('hidden');
 
         } else {
-            subscribeMessage.textContent = data.message || uiText.results.subscription.error;
+            subscribeMessage.textContent = data.error || uiText.results.subscription.error;
             subscribeMessage.classList.add('text-red-600');
+            console.error("Subscription failed:", data);
         }
     } catch (error) {
         console.error("Error subscribing:", error);
@@ -572,3 +574,4 @@ subscribeForm.addEventListener('submit', handleSubscription);
 
 // Initial render
 initApp();
+

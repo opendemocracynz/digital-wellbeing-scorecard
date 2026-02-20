@@ -18,8 +18,8 @@ const uiText = {
     "results": {
         "title": "Your Digital Archetype",
         "score_label": "Score",
-        "subscribe_cta_main": "Sign-up for more information.",
-        "subscribe_cta_details": "Learn more about what your score means, explain how to imprive your digital wellbeing<br/>, plus automatic retest reminder to track progress.",
+        "subscribe_cta_main": "Sign-up for more information",
+        "subscribe_cta_details": "Level up! Learn more about what your score means, explain how to improve your digital wellbeing, plus automatic retest reminder to track progress.",
         "email_placeholder": "Enter your email",
         "subscribe_button": "Subscribe",
         "claim_badge_button": "Claim Archetype Badge",
