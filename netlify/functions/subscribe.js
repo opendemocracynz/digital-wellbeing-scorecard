@@ -11,7 +11,7 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        const { email, archetype_segment, total_score, first_name } = JSON.parse(event.body);
+        const { email, archetype_segment, total_score, first_name, researchId } = JSON.parse(event.body);
 
         if (!email) {
             return { statusCode: 400, body: JSON.stringify({ message: 'Email is required' }) };
@@ -22,7 +22,8 @@ exports.handler = async function(event, context) {
             p_email: email, 
             p_segment: archetype_segment, 
             p_score: total_score,
-            p_first_name: first_name || null
+            p_first_name: first_name || null,
+            p_research_id: researchId || null
         });
 
         if (error) throw error;

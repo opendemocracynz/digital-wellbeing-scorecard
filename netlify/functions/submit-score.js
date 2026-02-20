@@ -1,10 +1,44 @@
 // netlify/functions/submit-score.js
+import quizData from '../../quiz_data.js';
 
 // IMPORTANT: Set these environment variables in your Netlify project settings
 const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Define the mapping from quiz categories to the four pillars
+const pillarMapping = {
+    "Agency": "Psychological",
+    "Environment": "Physiological",
+    "Psychology": "Psychological",
+    "Systems": "Cognitive",
+    "Focus": "Cognitive",
+    "Social": "Social",
+    "Creation": "Cognitive",
+    "Impact": "Psychological"
+};
+
+function getPillarScores(answers) {
+    const scores = {
+        Physiological: 0,
+        Psychological: 0,
+        Social: 0,
+        Cognitive: 0,
+    };
+
+    answers.forEach((score, index) => {
+        const question = quizData[index];
+        if (question) {
+            const pillar = pillarMapping[question.category];
+            if (pillar) {
+                scores[pillar] += score;
+            }
+        }
+    });
+
+    return scores;
+}
 
 function getArchetype(score) {
     if (score >= 15 && score <= 29) return { level: 1, name: 'Zombie Clickslave' };
@@ -24,17 +58,24 @@ exports.handler = async function(event, context) {
         const { answers } = JSON.parse(event.body);
         const totalScore = answers.reduce((acc, score) => acc + score, 0);
         const archetype = getArchetype(totalScore);
+        const pillarScores = getPillarScores(answers);
         const answer_string = answers.join('');
 
-        const { data, error } = await supabase
+        const { data: researchData, error } = await supabase
             .from('research_data')
             .insert([
                 { 
                     answer_string, 
                     total_score: totalScore, 
-                    archetype_level: archetype.level 
+                    archetype_level: archetype.level,
+                    physio_score: pillarScores.Physiological,
+                    psych_score: pillarScores.Psychological,
+                    social_score: pillarScores.Social,
+                    cog_score: pillarScores.Cognitive,
                 }
-            ]);
+            ])
+            .select('id')
+            .single();
 
         if (error) {
             throw error;
@@ -44,7 +85,8 @@ exports.handler = async function(event, context) {
             statusCode: 200,
             body: JSON.stringify({
                 totalScore,
-                archetype
+                archetype,
+                researchId: researchData.id,
             })
         };
     } catch (error) {

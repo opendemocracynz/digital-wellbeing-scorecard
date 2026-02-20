@@ -6,8 +6,14 @@
     <title>Digital Wellbeing Scorecard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .welcome-image {
+            width: 16rem;
+            height: 16rem;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
+<body class="">
 
     <div id="quiz-container" class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <div id="quiz-header">
@@ -36,12 +42,21 @@
         <p id="total-score" class="text-lg"></p>
 
         <div id="next-steps" class="mt-8">
-            <p class="text-gray-600">Want a detailed report and tips?</p>
-            <form id="subscribe-form" class="flex mt-2">
-                <input type="email" id="email-input" placeholder="Enter your email" class="w-full px-4 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-r-md">Subscribe</button>
-            </form>
-            <p id="subscribe-message" class="text-sm mt-2"></p>
+            <div id="primary-cta">
+                <p class="text-gray-600">Sign-up for more information.</p>
+                <p class="text-gray-600">We'll tell you more about what your score means, explain how to use the scorecard to imprive your digital wellbeing<br/>, plus automatic retest reminder to track progress.</p>
+                <div>
+                    <form id="subscribe-form" class="flex mt-2">
+                        <input type="email" id="email-input" placeholder="Enter your email" class="w-full px-4 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800" required>
+                        <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-r-md">Subscribe</button>
+                    </form>
+                    <p class="text-gray-600 text-xs mt-1"><i>Unsubscribe at any time</i></p>
+                </div>
+                <p id="subscribe-message" class="text-sm mt-2"></p>
+            </div>
+            <div id="secondary-ctas" class="hidden">
+                <!-- Share and Purchase buttons will be injected here -->
+            </div>
         </div>
     </div>
 

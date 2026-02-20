@@ -11,12 +11,20 @@ CREATE TABLE IF NOT EXISTS research_data (
     country_code TEXT
 );
 
+-- UPDATE: Add granular score columns
+ALTER TABLE research_data ADD COLUMN IF NOT EXISTS physio_score INTEGER;
+ALTER TABLE research_data ADD COLUMN IF NOT EXISTS psych_score INTEGER;
+ALTER TABLE research_data ADD COLUMN IF NOT EXISTS social_score INTEGER;
+ALTER TABLE research_data ADD COLUMN IF NOT EXISTS cog_score INTEGER;
+
+
 -- Table 2: marketing_leads (Email Collection)
 CREATE TABLE IF NOT EXISTS marketing_leads (
     email TEXT PRIMARY KEY,
     first_name TEXT,
     signup_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    archetype_segment INTEGER
+    archetype_segment INTEGER,
+    last_research_id UUID
 );
 
 -- SECURITY: Enable Row Level Security (RLS)
@@ -44,7 +52,8 @@ CREATE OR REPLACE FUNCTION submit_lead(
     p_email TEXT,
     p_segment INTEGER,
     p_score INTEGER DEFAULT NULL,
-    p_first_name TEXT DEFAULT NULL
+    p_first_name TEXT DEFAULT NULL,
+    p_research_id UUID DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -61,15 +70,17 @@ BEGIN
         initial_archetype, 
         initial_score, 
         first_name, 
-        submission_count
+        submission_count,
+        last_research_id
     )
-    VALUES (p_email, p_segment, p_score, p_segment, p_score, p_first_name, 1)
+    VALUES (p_email, p_segment, p_score, p_segment, p_score, p_first_name, 1, p_research_id)
     ON CONFLICT (email) DO UPDATE
     SET 
         archetype_segment = EXCLUDED.archetype_segment,
         current_score = EXCLUDED.current_score,
         submission_count = marketing_leads.submission_count + 1,
-        first_name = COALESCE(EXCLUDED.first_name, marketing_leads.first_name)
+        first_name = COALESCE(EXCLUDED.first_name, marketing_leads.first_name),
+        last_research_id = EXCLUDED.last_research_id
     RETURNING submission_count, initial_score INTO v_count, v_initial_score;
     
     IF v_count > 1 THEN

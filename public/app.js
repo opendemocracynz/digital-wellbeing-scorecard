@@ -3,6 +3,7 @@ import quizData from './quiz_data.js';
 const quizState = {
     currentQuestionIndex: 0,
     answers: new Array(quizData.length).fill(0), // Initialize with 0s to maintain data alignment
+    researchId: null, 
 };
 
 let autoAdvanceTimer = null;
@@ -84,8 +85,31 @@ const archetypeDetails = {
     }
 };
 
+// STORAGE
+const QUIZ_STORAGE_KEY = 'digitalWellbeingQuizState';
+
+function saveState() {
+    localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(quizState));
+}
+
+function loadState() {
+    const savedState = localStorage.getItem(QUIZ_STORAGE_KEY);
+    if (savedState) {
+        Object.assign(quizState, JSON.parse(savedState));
+        return true;
+    }
+    return false;
+}
+
+function clearStateAndReload() {
+    localStorage.removeItem(QUIZ_STORAGE_KEY);
+    window.location.reload();
+}
+
+
 // INITIALIZATION & THEME
 function initApp() {
+    loadState();
     // Apply Dark Mode / Gamified Theme to Body
     document.body.classList.add('bg-slate-900', 'text-slate-100', 'font-sans', 'antialiased');
     
@@ -99,6 +123,8 @@ function initApp() {
 }
 
 function createSplashScreen() {
+    const hasSavedData = localStorage.getItem(QUIZ_STORAGE_KEY) !== null;
+
     const splash = document.createElement('div');
     splash.id = 'splash-screen';
     splash.className = 'fixed inset-0 bg-slate-900 flex flex-col items-center justify-center z-50';
@@ -106,7 +132,7 @@ function createSplashScreen() {
         <div class="max-w-md w-full text-center p-6">
             <div class="mb-8 relative flex justify-center items-center">
                 <div class="w-32 h-32 bg-blue-500 rounded-full opacity-20 animate-pulse absolute"></div>
-                <img src="/images/digital-wellbeing-score.png" class="w-32 h-32 object-contain relative z-10" alt="Digital Wellbeing">
+                <img src="/images/dws-welcome.jpg" class="welcome-image object-contain relative z-10" alt="Digital Wellbeing">
             </div>
             <h1 class="text-4xl font-bold mb-2 text-white tracking-tight">Digital Wellbeing<br><span class="text-blue-400">Scorecard</span></h1>
             <p class="text-slate-400 mb-8 text-lg">Initialize system scan. Analyze your relationship with technology.</p>
@@ -118,12 +144,24 @@ function createSplashScreen() {
                 <div class="flex items-center text-slate-300"><span class="mr-2">⚙️</span> Systems</div>
             </div>
 
-            <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-900/50 uppercase tracking-widest animate-pulse">
-                Begin Assessment
-            </button>
+            <div id="splash-screen-actions" class="w-full">
+                <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-900/50 uppercase tracking-widest animate-pulse">
+                    ${hasSavedData ? 'Resume Assessment' : 'Begin Assessment'}
+                </button>
+            </div>
         </div>
     `;
     document.body.appendChild(splash);
+
+    if (hasSavedData) {
+        const actionsContainer = document.getElementById('splash-screen-actions');
+        const clearBtn = document.createElement('button');
+        clearBtn.id = 'clear-progress-btn';
+        clearBtn.textContent = 'Clear Progress & Restart';
+        clearBtn.className = 'w-full mt-4 text-slate-400 hover:text-white text-sm py-2 px-4 rounded-lg transition-colors';
+        clearBtn.onclick = clearStateAndReload;
+        actionsContainer.appendChild(clearBtn);
+    }
     
     // Hide main containers initially
     quizContainer.classList.add('hidden');
@@ -205,6 +243,7 @@ function updateProgressBar() {
 
 function selectAnswer(score) {
     quizState.answers[quizState.currentQuestionIndex] = score;
+    saveState();
     renderQuestion();
     startAutoAdvance();
 }
@@ -283,6 +322,9 @@ async function finishQuiz() {
     nextBtn.textContent = 'Calculating...';
     nextBtn.disabled = true;
 
+    // Clear saved state
+    localStorage.removeItem(QUIZ_STORAGE_KEY);
+
     try {
         const response = await fetch('/.netlify/functions/submit-score', {
             method: 'POST',
@@ -292,6 +334,7 @@ async function finishQuiz() {
         if (!response.ok) throw new Error('Submission failed');
 
         const result = await response.json();
+        quizState.researchId = result.researchId;
         displayResults(result.archetype, result.totalScore);
     } catch (error) {
         console.error("Error submitting score:", error);
@@ -304,6 +347,7 @@ async function finishQuiz() {
 }
 
 function displayResults(archetype, totalScore) {
+    window.scrollTo(0, 0); 
     console.log('Displaying results:', { archetype, totalScore });
     quizContainer.classList.add('hidden');
     resultContainer.classList.remove('hidden');
@@ -432,24 +476,15 @@ function updateProfileCard(level, userScore, isUserResult) {
     archetypeName.classList.add('hidden');
     totalScoreEl.classList.add('hidden');
     
-    // Update CTA Text based on level (Only update if it's the user's result)
-    if (isUserResult) {
-        const ctaText = subscribeForm.previousElementSibling;
-        if(ctaText) {
-            ctaText.innerHTML = `<span class="block text-blue-400 font-bold mb-1">Take back your attention!</span>${data.cta}`;
-            ctaText.className = 'text-slate-300 mb-4';
-        }
-    }
-    
     // Add "Get Full Report" Button (Payment Placeholder)
-    const nextSteps = document.getElementById('next-steps');
-    if (nextSteps && !document.getElementById('payment-btn')) {
+    const secondaryCtas = document.getElementById('secondary-ctas');
+    if (secondaryCtas && !document.getElementById('payment-btn')) {
         const btn = document.createElement('a');
         btn.id = 'payment-btn';
         btn.href = `payment.html?level=${level}`;
         btn.className = 'block w-full text-center bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg mt-6 transition-all transform hover:scale-105 uppercase tracking-widest border border-yellow-400';
         btn.innerHTML = '🔓 Unlock Full Report <span class="text-sm opacity-80 ml-1">($9)</span>';
-        nextSteps.appendChild(btn);
+        secondaryCtas.appendChild(btn);
     }
 
     // If viewing a different level, show a "Back to my result" hint? 
@@ -462,31 +497,35 @@ function addShareButtons(archetype, score) {
 
     const shareContainer = document.createElement('div');
     shareContainer.id = containerId;
-    shareContainer.className = 'flex gap-3 justify-center mt-8 mb-4';
+    shareContainer.className = 'mt-8 mb-4 text-left';
     
-    const text = `I just scored ${score}/75 on the Digital Wellbeing Scorecard. I'm a "${archetype.name}". Find out your archetype:`;
+    const text = `I just scored ${score}/75 on the Digital Wellbeing Scorecard and my archetype is "${archetype.name}". Find out yours!`;
     const url = window.location.href;
+    const shareMessage = `${text}\n\n${url}`;
+
+    shareContainer.innerHTML = `
+        <h3 class="text-lg font-bold mb-2">Challenge a Friend</h3>
+        <textarea id="share-message" class="w-full p-2 border rounded-md bg-slate-700 text-slate-200" rows="3" readonly>${shareMessage}</textarea>
+        <button id="copy-btn" class="w-full mt-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors text-center shadow-lg">Click to Copy</button>
+        <p class="text-center text-xs text-slate-400 mt-1"><i>Share via email or social media</i></p>
+    `;
     
-    // LinkedIn
-    const liBtn = document.createElement('a');
-    liBtn.href = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
-    liBtn.target = '_blank';
-    liBtn.className = 'flex-1 bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors text-center shadow-lg';
-    liBtn.innerHTML = 'Share on LinkedIn';
-    
-    // X / Twitter
-    const xBtn = document.createElement('a');
-    xBtn.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-    xBtn.target = '_blank';
-    xBtn.className = 'flex-1 bg-black hover:bg-gray-800 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors text-center shadow-lg';
-    xBtn.innerHTML = 'Post on X';
-    
-    shareContainer.appendChild(liBtn);
-    shareContainer.appendChild(xBtn);
-    
-    // Insert after the subscribe form area
-    const nextSteps = document.getElementById('next-steps');
-    nextSteps.appendChild(shareContainer);
+    const secondaryCtas = document.getElementById('secondary-ctas');
+    secondaryCtas.appendChild(shareContainer);
+
+    const copyBtn = document.getElementById('copy-btn');
+
+    copyBtn.onclick = () => {
+        navigator.clipboard.writeText(shareMessage).then(() => {
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = 'Copied!';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    };
 }
 
 async function handleSubscription(event) {
@@ -508,7 +547,8 @@ async function handleSubscription(event) {
             body: JSON.stringify({
                 email,
                 archetype_segment: archetype.level,
-                total_score: totalScore
+                total_score: totalScore,
+                researchId: quizState.researchId
             })
         });
         
@@ -527,6 +567,11 @@ async function handleSubscription(event) {
             }
             subscribeMessage.classList.add('text-green-600');
             emailInput.value = '';
+
+            // Hide primary CTA and show secondary CTAs
+            document.getElementById('primary-cta').classList.add('hidden');
+            document.getElementById('secondary-ctas').classList.remove('hidden');
+
         } else {
             subscribeMessage.textContent = data.message || 'Something went wrong. Please try again.';
             subscribeMessage.classList.add('text-red-600');
