@@ -1,4 +1,7 @@
 import quizData from './quiz_data.js';
+import uiText from './ui_text.js';
+
+const archetypeDetails = uiText.archetypes;
 
 const quizState = {
     currentQuestionIndex: 0,
@@ -37,53 +40,6 @@ const categoryIcons = {
 // -------------------------------------------------------------------------
 // EDIT THIS SECTION to change Archetype Names, Descriptions, Images, and CTAs
 // -------------------------------------------------------------------------
-const archetypeDetails = {
-    1: {
-        name: 'Zombie Clickslave',
-        range: [15, 29],
-        desc: 'Driven by compulsion. Technology dictates your schedule, mood, and attention span. Immediate intervention recommended.',
-        color: 'text-red-500',
-        bg: 'bg-red-500',
-        img: '/images/level-1.png',
-        cta: 'Reclaim your agency. Immediate intervention recommended to break the cycle.'
-    },
-    2: {
-        name: 'Unconscious Doomscroller',
-        range: [30, 44],
-        desc: 'High regret, low friction. You lose hours to screens without meaning to, but you are aware of the pain.',
-        color: 'text-orange-500',
-        bg: 'bg-orange-500',
-        img: '/images/level-2.png',
-        cta: 'Stop the scroll. Learn to build "circuit breakers" into your day.'
-    },
-    3: {
-        name: 'Digital Drifter',
-        range: [45, 55],
-        desc: 'Reactive and distracted. You function okay, but your attention is constantly fragmented by pings and buzzes.',
-        color: 'text-yellow-400',
-        bg: 'bg-yellow-400',
-        img: '/images/level-3.png',
-        cta: 'Focus your attention. Move from reactive habits to proactive systems.'
-    },
-    4: {
-        name: 'Intentional Architect',
-        range: [56, 68],
-        desc: 'Systematized and proactive. You use tools to block distractions, though you still fight the occasional battle.',
-        color: 'text-blue-400',
-        bg: 'bg-blue-400',
-        img: '/images/level-4.png',
-        cta: 'Optimize your flow. Fine-tune your environment for deep work.'
-    },
-    5: {
-        name: 'Digital Sovereign',
-        range: [69, 75],
-        desc: 'The master level. Technology is a precision instrument that serves you. You are fully present offline.',
-        color: 'text-purple-400',
-        bg: 'bg-purple-400',
-        img: '/images/level-5.png',
-        cta: 'Maintain your sovereignty. Lead others by example.'
-    }
-};
 
 // STORAGE
 const QUIZ_STORAGE_KEY = 'digitalWellbeingQuizState';
@@ -107,9 +63,26 @@ function clearStateAndReload() {
 }
 
 
+function populateText() {
+    document.title = "Digital Wellbeing Scorecard"; // Assuming this is static from settings
+    questionText.textContent = uiText.quiz.question_placeholder;
+    questionCategory.textContent = uiText.quiz.category_placeholder;
+    prevBtn.textContent = uiText.quiz.previous_button;
+    nextBtn.textContent = uiText.quiz.next_button;
+
+    resultContainer.querySelector('h2').textContent = uiText.results.title;
+    const primaryCta = document.getElementById('primary-cta');
+    primaryCta.querySelector('p:first-of-type').innerHTML = uiText.results.subscribe_cta_main;
+    primaryCta.querySelector('p:nth-of-type(2)').innerHTML = uiText.results.subscribe_cta_details;
+    emailInput.placeholder = uiText.results.email_placeholder;
+    subscribeForm.querySelector('button').textContent = uiText.results.subscribe_button;
+    primaryCta.querySelector('p:last-of-type').innerHTML = `<i>${uiText.results.unsubscribe_info}</i>`;
+}
+
 // INITIALIZATION & THEME
 function initApp() {
     loadState();
+    populateText();
     // Apply Dark Mode / Gamified Theme to Body
     document.body.classList.add('bg-slate-900', 'text-slate-100', 'font-sans', 'antialiased');
     
@@ -134,8 +107,8 @@ function createSplashScreen() {
                 <div class="w-32 h-32 bg-blue-500 rounded-full opacity-20 animate-pulse absolute"></div>
                 <img src="/images/dws-welcome.jpg" class="welcome-image object-contain relative z-10" alt="Digital Wellbeing">
             </div>
-            <h1 class="text-4xl font-bold mb-2 text-white tracking-tight">Digital Wellbeing<br><span class="text-blue-400">Scorecard</span></h1>
-            <p class="text-slate-400 mb-8 text-lg">Initialize system scan. Analyze your relationship with technology.</p>
+            <h1 class="text-4xl font-bold mb-2 text-white tracking-tight">${uiText.splash.title}</h1>
+            <p class="text-slate-400 mb-8 text-lg">${uiText.splash.subtitle}</p>
             
             <div class="grid grid-cols-2 gap-4 mb-8 text-left bg-slate-800 p-4 rounded-lg border border-slate-700">
                 <div class="flex items-center text-slate-300"><span class="mr-2">🧠</span> Psychology</div>
@@ -146,7 +119,7 @@ function createSplashScreen() {
 
             <div id="splash-screen-actions" class="w-full">
                 <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-900/50 uppercase tracking-widest animate-pulse">
-                    ${hasSavedData ? 'Resume Assessment' : 'Begin Assessment'}
+                    ${hasSavedData ? uiText.splash.resume_button : uiText.splash.assessment_button}
                 </button>
             </div>
         </div>
@@ -157,7 +130,7 @@ function createSplashScreen() {
         const actionsContainer = document.getElementById('splash-screen-actions');
         const clearBtn = document.createElement('button');
         clearBtn.id = 'clear-progress-btn';
-        clearBtn.textContent = 'Clear Progress & Restart';
+        clearBtn.textContent = uiText.splash.clear_progress_button;
         clearBtn.className = 'w-full mt-4 text-slate-400 hover:text-white text-sm py-2 px-4 rounded-lg transition-colors';
         clearBtn.onclick = clearStateAndReload;
         actionsContainer.appendChild(clearBtn);
@@ -216,7 +189,7 @@ function renderQuestion() {
     const isLast = quizState.currentQuestionIndex === quizData.length - 1;
     const hasAnswer = quizState.answers[quizState.currentQuestionIndex] !== 0;
     
-    nextBtn.textContent = isLast ? 'Finish' : (hasAnswer ? 'Next' : 'Skip');
+    nextBtn.textContent = isLast ? uiText.quiz.finish_button : (hasAnswer ? uiText.quiz.next_button : uiText.quiz.skip_button);
     // Reset click handler to default (clears any countdown overrides)
     nextBtn.onclick = nextQuestion;
     nextBtn.className = 'bg-blue-600 hover:bg-blue-500 text-white px-8 py-2 rounded-lg font-bold shadow-lg shadow-blue-900/20 transition-colors';
@@ -258,7 +231,7 @@ function startAutoAdvance() {
     if (autoAdvanceTimer) clearInterval(autoAdvanceTimer);
     
     let count = 3;
-    const updateBtn = () => nextBtn.textContent = `Next in ${count}`;
+    const updateBtn = () => nextBtn.textContent = `${uiText.quiz.next_button} in ${count}`;
     
     updateBtn();
     
@@ -289,7 +262,7 @@ function nextQuestion() {
         const unansweredCount = quizState.answers.filter(score => score === 0).length;
         
         if (unansweredCount > 0) {
-            const proceed = confirm(`You have skipped ${unansweredCount} questions.\n\nUnanswered questions will be scored as zero (Zombie Mode). Do you want to proceed?\n\nClick OK to submit, or Cancel to go back to the missed questions.`);
+            const proceed = confirm(uiText.results.unanswered_warning.replace('{{count}}', unansweredCount));
             if (!proceed) {
                 // Jump to the first unanswered question
                 const firstMissedIndex = quizState.answers.findIndex(score => score === 0);
@@ -325,7 +298,7 @@ async function finishQuiz() {
     const archetype = getArchetype(totalScore);
 
     // Show loading state
-    nextBtn.textContent = 'Calculating...';
+    nextBtn.textContent = uiText.quiz.calculating_button;
     nextBtn.disabled = true;
 
     // Clear saved state
@@ -347,7 +320,7 @@ async function finishQuiz() {
         // Fallback: Show local results so the user isn't stuck
         displayResults(archetype, totalScore);
     } finally {
-        nextBtn.textContent = 'Finish';
+        nextBtn.textContent = uiText.quiz.finish_button;
         nextBtn.disabled = false;
     }
 }
@@ -373,13 +346,13 @@ function displayResults(archetype, totalScore) {
             <div class="flex items-start mb-4">
                 <img src="${archetypeDetails[archetype.level].img}" class="w-20 h-20 rounded-full border-2 border-blue-400 mr-5 object-cover flex-shrink-0 shadow-md">
                 <div>
-                    <div class="text-xs text-blue-400 uppercase tracking-wider font-bold">Your Archetype</div>
+                    <div class="text-xs text-blue-400 uppercase tracking-widest font-bold">${uiText.results.title}</div>
                     <div class="text-white font-bold text-2xl leading-tight mb-2">${archetype.name}</div>
                     <p class="text-slate-300 text-sm leading-relaxed">${archetypeDetails[archetype.level].desc}</p>
                 </div>
             </div>
             <div class="bg-slate-800/80 rounded p-3 text-center border border-slate-600 mt-2">
-                <span class="text-slate-400 text-xs uppercase tracking-widest mr-2">Score</span>
+                <span class="text-slate-400 text-xs uppercase tracking-widest mr-2">${uiText.results.score_label}</span>
                 <span class="text-white font-bold text-xl font-mono">${totalScore} / 75</span>
             </div>
         `;
@@ -394,7 +367,7 @@ function displayResults(archetype, totalScore) {
     addShareButtons(archetype, totalScore);
 
     const submitBtn = subscribeForm.querySelector('button');
-    submitBtn.textContent = "Claim Archetype Badge";
+    submitBtn.textContent = uiText.results.claim_badge_button;
     submitBtn.className = "w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-green-900/20 transition-all";
 }
 
@@ -429,7 +402,7 @@ function renderGauge(userScore, userLevel) {
                 ${markersHTML}
                 <div class="absolute top-1/2 w-1 h-8 bg-white border-2 border-slate-900 -mt-4 transform -translate-x-1/2 transition-all duration-1000 z-20 shadow-[0_0_10px_rgba(255,255,255,0.5)]" style="left: ${userPercent}%"></div>
             </div>
-            <div class="text-center mt-4 font-mono text-xs text-slate-500">SCORE: <span class="text-white font-bold text-lg">${userScore}</span> / 75</div>
+            <div class="text-center mt-4 font-mono text-xs text-slate-500">${uiText.results.score_label.toUpperCase()}: <span class="text-white font-bold text-lg">${userScore}</span> / 75</div>
         </div>
     `;
     
@@ -458,7 +431,7 @@ function updateProfileCard(level, userScore, isUserResult) {
     const percent = ((midPoint - minScore) / (maxScore - minScore)) * 100;
 
     // If exploring, show a small "Viewing" label
-    const label = isUserResult ? "" : `<div class="text-xs text-slate-500 uppercase tracking-widest mb-2">Viewing Profile</div>`;
+    const label = isUserResult ? "" : `<div class="text-xs text-slate-500 uppercase tracking-widest mb-2">${uiText.results.viewing_profile_label}</div>`;
     
     // Update the container style to be a "Call-out Box"
     archetypeLevel.className = 'relative bg-slate-800 p-6 rounded-lg border border-slate-600 shadow-xl mt-4 transition-all duration-300';
@@ -489,7 +462,7 @@ function updateProfileCard(level, userScore, isUserResult) {
         btn.id = 'payment-btn';
         btn.href = `payment.html?level=${level}`;
         btn.className = 'block w-full text-center bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg mt-6 transition-all transform hover:scale-105 uppercase tracking-widest border border-yellow-400';
-        btn.innerHTML = '🔓 Unlock Full Report <span class="text-sm opacity-80 ml-1">($9)</span>';
+        btn.innerHTML = uiText.results.unlock_report_button;
         secondaryCtas.appendChild(btn);
     }
 
@@ -505,15 +478,15 @@ function addShareButtons(archetype, score) {
     shareContainer.id = containerId;
     shareContainer.className = 'mt-8 mb-4 text-left';
     
-    const text = `I just scored ${score}/75 on the Digital Wellbeing Scorecard and my archetype is "${archetype.name}". Find out yours!`;
-    const url = window.location.href;
-    const shareMessage = `${text}\n\n${url}`;
+    const shareMessage = uiText.results.share_message_template
+        .replace('{{score}}', score)
+        .replace('{{archetype}}', archetype.name);
 
     shareContainer.innerHTML = `
-        <h3 class="text-lg font-bold mb-2">Challenge a Friend</h3>
+        <h3 class="text-lg font-bold mb-2">${uiText.results.share_title}</h3>
         <textarea id="share-message" class="w-full p-2 border rounded-md bg-slate-700 text-slate-200" rows="3" readonly>${shareMessage}</textarea>
-        <button id="copy-btn" class="w-full mt-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors text-center shadow-lg">Click to Copy</button>
-        <p class="text-center text-xs text-slate-400 mt-1"><i>Share via email or social media</i></p>
+        <button id="copy-btn" class="w-full mt-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors text-center shadow-lg">${uiText.results.copy_button}</button>
+        <p class="text-center text-xs text-slate-400 mt-1"><i>${uiText.results.share_via}</i></p>
     `;
     
     const secondaryCtas = document.getElementById('secondary-ctas');
@@ -524,7 +497,7 @@ function addShareButtons(archetype, score) {
     copyBtn.onclick = () => {
         navigator.clipboard.writeText(shareMessage).then(() => {
             const originalText = copyBtn.innerHTML;
-            copyBtn.innerHTML = 'Copied!';
+            copyBtn.innerHTML = uiText.results.copied_button;
             setTimeout(() => {
                 copyBtn.innerHTML = originalText;
             }, 2000);
@@ -564,9 +537,9 @@ async function handleSubscription(event) {
             // Handle Returning User Progress Message
             if (data.status === 'updated' && data.score_diff !== undefined) {
                 let msg = data.message;
-                if (data.score_diff > 0) msg = `Welcome back! You improved by ${data.score_diff} points! 🚀`;
-                else if (data.score_diff < 0) msg = `Welcome back. Your score dropped by ${Math.abs(data.score_diff)} points.`;
-                else msg = `Welcome back. Your score is unchanged.`;
+                if (data.score_diff > 0) msg = uiText.results.subscription.welcome_back_improved.replace('{{score_diff}}', data.score_diff);
+                else if (data.score_diff < 0) msg = uiText.results.subscription.welcome_back_declined.replace('{{score_diff}}', Math.abs(data.score_diff));
+                else msg = uiText.results.subscription.welcome_back_unchanged;
                 subscribeMessage.textContent = msg;
             } else {
                 subscribeMessage.textContent = data.message;
@@ -579,12 +552,12 @@ async function handleSubscription(event) {
             document.getElementById('secondary-ctas').classList.remove('hidden');
 
         } else {
-            subscribeMessage.textContent = data.message || 'Something went wrong. Please try again.';
+            subscribeMessage.textContent = data.message || uiText.results.subscription.error;
             subscribeMessage.classList.add('text-red-600');
         }
     } catch (error) {
         console.error("Error subscribing:", error);
-        subscribeMessage.textContent = 'Something went wrong. Please try again.';
+        subscribeMessage.textContent = uiText.results.subscription.error;
         subscribeMessage.classList.add('text-red-600');
     } finally {
         submitBtn.textContent = originalBtnText;
