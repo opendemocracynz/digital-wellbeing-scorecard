@@ -184,7 +184,7 @@ function renderQuestion() {
     // Update Progress Bar (Inject if missing)
     updateProgressBar();
 
-    questionText.textContent = question.question;
+    questionText.textContent = `${question.id}. ${question.question}`;
     questionText.className = 'text-2xl font-bold mb-6 text-white';
     
     questionCategory.innerHTML = `<span class="text-2xl mr-2">${icon}</span> ${question.category} Scan`;
@@ -227,7 +227,7 @@ function updateProgressBar() {
     if (!progressContainer) {
         progressContainer = document.createElement('div');
         progressContainer.id = 'progress-container';
-        progressContainer.className = 'w-full bg-slate-700 h-2 rounded-full mb-8 overflow-hidden';
+        progressContainer.className = 'w-full bg-slate-700 h-2 rounded-full mb-8 overflow-hidden flex items-center';
         quizContainer.insertBefore(progressContainer, quizContainer.firstChild);
         
         const bar = document.createElement('div');
@@ -235,9 +235,15 @@ function updateProgressBar() {
         bar.className = 'bg-blue-500 h-full transition-all duration-300 ease-out';
         bar.style.width = '0%';
         progressContainer.appendChild(bar);
+
+        const total = document.createElement('div');
+        total.id = 'progress-total';
+        total.className = 'ml-2 bg-slate-600 text-xs font-bold text-white rounded-full h-6 w-6 flex items-center justify-center';
+        total.textContent = quizData.length;
+        progressContainer.appendChild(total);
     }
     
-    const progress = ((quizState.currentQuestionIndex + 1) / quizData.length) * 100;
+    const progress = (quizState.currentQuestionIndex / (quizData.length -1)) * 100;
     document.getElementById('progress-bar').style.width = `${progress}%`;
 }
 
