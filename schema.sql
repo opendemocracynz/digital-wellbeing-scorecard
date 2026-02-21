@@ -13,6 +13,7 @@ create table public.research_data (
   score_social integer null,
   score_cognitive integer null,
   primary_weakness_id integer null,
+  user_email text null,
   constraint research_data_pkey primary key (id)
 ) TABLESPACE pg_default;
 
@@ -56,6 +57,11 @@ where
 ALTER TABLE research_data ENABLE ROW LEVEL SECURITY;
 ALTER TABLE marketing_leads ENABLE ROW LEVEL SECURITY;
 
+-- Add foreign key constraint to link research data to marketing leads
+ALTER TABLE public.research_data
+ADD CONSTRAINT research_data_user_email_fkey
+FOREIGN KEY (user_email) REFERENCES public.marketing_leads(email);
+
 -- POLICIES: Allow public (anonymous) inserts
 -- We do not allow SELECT/UPDATE/DELETE for public to protect privacy
 
@@ -98,12 +104,14 @@ BEGIN
         archetype_segment = EXCLUDED.archetype_segment,
         current_score = EXCLUDED.current_score,
         submission_count = marketing_leads.submission_count + 1,
-        first_name = COALESCE(EXCLUDED.first_name, marketing_leads.first_name),
-        last_research_id = EXCLUDED.last_research_id
-    RETURNING submission_count, initial_score INTO v_count, v_initial_score;
-
-    IF v_count > 1 THEN
-        RETURN jsonb_build_object(
+                first_name = COALESCE(EXCLUDED.first_name, marketing_leads.first_name),
+                last_research_id = EXCLUDED.last_research_id
+            RETURNING submission_count, initial_score INTO v_count, v_initial_score;
+        
+            -- Back-fill the user's email into the research data record
+            UPDATE public.research_data SET user_email = p_email WHERE id = p_research_id AND p_research_id IS NOT NULL;
+            
+            IF v_count > 1 THEN        RETURN jsonb_build_object(
             'status', 'updated',
             'message', 'Welcome back! Profile updated.',
             'score_diff', (p_score - v_initial_score)

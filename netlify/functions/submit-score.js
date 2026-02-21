@@ -68,10 +68,10 @@ exports.handler = async function(event, context) {
                     answer_string, 
                     total_score: totalScore, 
                     archetype_level: archetype.level,
-                    physio_score: pillarScores.Physiological,
-                    psych_score: pillarScores.Psychological,
-                    social_score: pillarScores.Social,
-                    cog_score: pillarScores.Cognitive,
+                    score_physiological: pillarScores.Physiological,
+                    score_psychological: pillarScores.Psychological,
+                    score_social: pillarScores.Social,
+                    score_cognitive: pillarScores.Cognitive,
                 }
             ])
             .select('id')

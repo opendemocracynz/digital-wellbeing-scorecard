@@ -312,6 +312,7 @@ async function finishQuiz() {
 
         const result = await response.json();
         quizState.researchId = result.researchId;
+        saveState(); // Save the researchId to localStorage
         displayResults(result.archetype, result.totalScore);
     } catch (error) {
         console.error("Error submitting score:", error);
