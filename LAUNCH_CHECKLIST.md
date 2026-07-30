@@ -96,7 +96,11 @@ launch if marked **(blocking)**.
       ships to more users.
 
 ## 9. Things explicitly OK to launch without (not blocking)
-- Full drip email sequence (`daily-mailer`, Day 5/15/50/70 content) — currently not deployed anywhere;
-  fine to launch with just the Day-0 confirmation email (§7) and add the drip sequence as a fast-follow.
+- Real Day 3/10 story content — `scheduled-drip.js` is live and will fire on schedule, but those two
+  stages currently send placeholder copy (see PROJECT_CONTEXT.md §5) until the founder-narrative text is
+  written. Fine to launch before that's filled in; just don't forget it's placeholder in production.
+- Live verification of the Day 3/10/30/90 sends against a real inbox — only Day 0 and the underlying
+  `quiz_completed_at` fix have been tested end-to-end so far. Worth a manual check once real leads reach
+  those stages, but not a reason to hold launch.
 - The compiled-Tailwind build (vs. the CDN script currently in use) — functionally fine for launch, best
   practice cleanup to follow.

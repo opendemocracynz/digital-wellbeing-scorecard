@@ -116,6 +116,37 @@ not redo the dead code's raw-`Math.min()` approach.
   consistent sending and recipients marking mail as not-spam. Not a one-time fix; see Roadmap.
 * Payment: `public/payment.html` is a non-functional placeholder — a static "Pay $9.00" button that
   triggers `alert('This is a demo payment gateway...')`. No Stripe or other processor is integrated.
+* **Follow-up drip sequence (2026-07-31):** `netlify/functions/scheduled-drip.js` runs daily (Netlify
+  Scheduled Function, confirmed registered with `schedule: "@daily"` after deploy — see
+  `searchSiteFunctions` API) and sends, per lead, whichever of Day 3 / 10 / 30 / 90 they've newly crossed
+  since `quiz_completed_at`:
+  - **Day 3 / 10** carry the founder narrative (Rakesh's own turnaround story, told in two parts). Content
+    is **placeholder text** in `netlify/functions/lib/drip-email.js` — real copy is pending (see writing
+    spec below). Everything else about them (send timing, subject, unsubscribe link) is live.
+  - **Day 30** is a real, working progress-recap + retake-CTA email.
+  - **Day 90** is a real, working progress-recap + retake-CTA email **plus a free poster PDF**, delivered
+    via `netlify/functions/download-poster.js` (a signed URL from Supabase Storage's private `reports`
+    bucket, regenerated fresh on each click rather than embedded statically, so the email link never
+    expires).
+  - Day 3/10/30 skip leads with `has_purchased_report = true`; Day 90 intentionally goes to **everyone**
+    non-unsubscribed, purchased or not (product decision, 2026-07-31).
+  - This fix required discovering and patching a real gap: `submit_lead()` never set
+    `quiz_completed_at` or reset `last_email_stage`, so every day-based calculation would have silently
+    been a no-op forever. Fixed in the same migration — retaking the quiz now restarts the 30/90-day
+    clock from the new attempt.
+  - Supersedes `daily-mailer/index.ts` (see Known Issues) rather than reconciling with it — that file's
+    cadence (Day 5/15/50/70) and template IDs were already stale/never deployed.
+* **Report/poster assets:** the 5 per-archetype PDFs and the poster (all Typst-authored) are uploaded to a
+  **private** Supabase Storage bucket named `reports`, filenames `level-N-report.pdf` and
+  `digital-wellbeing-scorecard-poster.pdf`. Deliberately not in `public/` — anything there is a guessable,
+  unprotected URL, which would let anyone download the paid reports without paying. `download-poster.js`
+  is scoped to only ever serve the free poster (hardcoded filename, not a `?file=` param) — a
+  purchase-checked equivalent for the paid reports is part of the Stripe work, not built yet.
+  **Known content issues in the PDFs as of upload** (flagged, not yet fixed): "Zombie Click slave" is two
+  words in `level-1-report.pdf` (should match the one-word branding used everywhere else), and the
+  corner tracking code reads `DS-ARCH-L4`/`DWS-ARCH-L4` (inconsistent prefix, and stuck at "L4" regardless
+  of actual archetype level) on at least the two files reviewed — likely an uncorrected Typst template
+  placeholder across all 5.
 
 ## 6. Known Issues (open, unless marked fixed)
 
@@ -125,11 +156,13 @@ not redo the dead code's raw-`Math.min()` approach.
    `styles.css`, no `netlify.toml` build step) is still worth finishing properly — tracked in Roadmap as
    a fast-follow, not a launch blocker, since the CDN approach works.
 2. `netlify/functions/emailService.js` is dead code — not imported or called anywhere.
-3. `daily-mailer/index.ts` (the drip-email cron job) targets the Supabase Edge Functions runtime (Deno,
-   `Deno.serve`) but there is no `supabase/` directory, no `config.toml`, and no evidence it has ever been
-   deployed or scheduled. `MAILERSEND_API_KEY` is not set anywhere. It currently does nothing.
+3. ~~`daily-mailer/index.ts` never deployed.~~ **Superseded 2026-07-31**: `scheduled-drip.js` (Netlify
+   Scheduled Function) replaces it. `daily-mailer/index.ts` is now doubly dead — left in the repo for
+   reference but nothing points to it; safe to delete whenever convenient (P2 below).
 4. Duplicate `quiz_data.js` (repo root + `public/`) — two sources of truth that must be hand-kept in sync.
 5. `research_data.country_code` and `.primary_weakness_id` are schema columns nothing ever populates.
+6. `netlify/functions/lib/drip-email.js`'s Day 3 and Day 10 content is placeholder text pending the
+   founder-narrative copy (see Roadmap).
 
 ## 7. Roadmap (prioritized)
 
@@ -152,25 +185,31 @@ and push a "final" launch build, not to keep iterating on architecture first.
 - Re-run [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) end-to-end once payment lands.
 
 **P1 — fast-follow (don't block launch, but do soon after)**
+- **Write the Day 3/10 founder-narrative copy** (spec already given, pending Rakesh's writing session) and
+  drop it into `netlify/functions/lib/drip-email.js`'s `buildStory1`/`buildStory2`.
+- **Fix the 5 report PDFs**: "Zombie Click slave" → "Zombie Clickslave", and correct the `DS-ARCH-L4` /
+  `DWS-ARCH-L4` header codes to the right prefix + level per file. Re-upload to the `reports` Storage
+  bucket once fixed.
+- **Build the purchase-gated report delivery endpoint** — needed for the Stripe work anyway: a function
+  parallel to `download-poster.js` but that checks `marketing_leads.has_purchased_report` (or a
+  payment-specific token) before generating a signed URL for `level-N-report.pdf`. Do this alongside
+  Stripe, not before — no reason to build it earlier.
 - Finish the compiled-Tailwind build properly (populate `styles.css` with `@tailwind` directives, add a
   real `[build.command]` to `netlify.toml`) so production isn't running the CDN script, which Tailwind
   itself says isn't meant for production use.
-- Deploy + schedule `daily-mailer` for the full drip sequence (currently doesn't run anywhere — see
-  Known Issues). Needs: decide Supabase Edge Function vs. scheduled Netlify Function, reconcile the Day
-  0/2/4/7 vs. Day 5/15/50/70 cadence disagreement between old docs, fix the `ARCHETYPE_CONTENT` key typos
-  (`31`, missing `4`) and placeholder template IDs, set `MAILERSEND_API_KEY`.
 - No "No thanks" decline path: share buttons and the report-unlock CTA are currently only reachable by
   submitting an email. If that's an intentional hard email gate, no action needed — just confirm it's
   intentional; if not, add the decline path the original design called for.
-- Compute and store `primary_weakness_id` so weakness-based email personalization is possible.
+- Compute and store `primary_weakness_id` so weakness-based email personalization is possible outside the
+  email-send-time calculation that already exists.
+- Watch the first live Day 3/10/30/90 sends once real leads reach those stages — nothing has exercised
+  this path against a real inbox yet (only the Day-0 path and the SQL fix have been verified).
 
 **P2 — cleanup**
-- Delete `netlify/functions/emailService.js` (dead code) or wire it into the MailerSend work above if the
-  weakness-email approach is still wanted.
+- Delete `netlify/functions/emailService.js` and the now-fully-superseded `daily-mailer/index.ts` (dead
+  code, not deployed, doubly so now).
 - Collapse the duplicate `quiz_data.js` into one file both the frontend and the Netlify function import
   from.
-- Create the `view_pending_marketing_emails` view the old doc described, or drop the reference —
-  `daily-mailer` currently queries `marketing_leads` directly instead.
 
 **Done this session (for context, not action items)**
 - Fixed `submit-score.js` crashing on every call from an ESM import inside a CommonJS function.
@@ -183,3 +222,9 @@ and push a "final" launch build, not to keep iterating on architecture first.
 - Built and shipped the Day-0 welcome email (MailerSend, custom HTML, not a dashboard template) and a
   working unsubscribe endpoint; extended `submit_lead()` to return pillar scores for it.
 - Diagnosed spam placement on the first real send and added the missing DMARC record.
+- Built and deployed the Day 3/10/30/90 drip sequence as a Netlify Scheduled Function (confirmed
+  registered with Netlify's cron scheduler), superseding the never-deployed `daily-mailer/index.ts`.
+- Found and fixed a second real gap: `submit_lead()` never set `quiz_completed_at` or
+  `last_email_stage`, which would have made the entire day-based drip schedule permanently inert.
+- Set up private Supabase Storage delivery (signed URLs, service_role key) for the poster/report PDFs,
+  scoped so the free poster can't be used to also leak the paid reports.
