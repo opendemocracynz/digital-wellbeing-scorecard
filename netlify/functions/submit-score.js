@@ -1,5 +1,7 @@
 // netlify/functions/submit-score.js
 
+const crypto = require('crypto');
+
 // IMPORTANT: Set these environment variables in your Netlify project settings
 const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -66,22 +68,25 @@ exports.handler = async function(event, context) {
         const archetype = getArchetype(totalScore);
         const pillarScores = getPillarScores(answers);
         const answer_string = answers.join('');
+        const researchId = crypto.randomUUID();
 
-        const { data: researchData, error } = await supabase
+        // Generate the id ourselves and skip .select() after insert: RLS has no
+        // SELECT policy on research_data (by design, to keep results private),
+        // and RETURNING an inserted row is checked against the SELECT policy too.
+        const { error } = await supabase
             .from('research_data')
             .insert([
-                { 
-                    answer_string, 
-                    total_score: totalScore, 
+                {
+                    id: researchId,
+                    answer_string,
+                    total_score: totalScore,
                     archetype_level: archetype.level,
                     score_physiological: pillarScores.Physiological,
                     score_psychological: pillarScores.Psychological,
                     score_social: pillarScores.Social,
                     score_cognitive: pillarScores.Cognitive,
                 }
-            ])
-            .select('id')
-            .single();
+            ]);
 
         if (error) {
             throw error;
@@ -92,7 +97,7 @@ exports.handler = async function(event, context) {
             body: JSON.stringify({
                 totalScore,
                 archetype,
-                researchId: researchData.id,
+                researchId,
             })
         };
     } catch (error) {
