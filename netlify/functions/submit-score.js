@@ -1,5 +1,4 @@
 // netlify/functions/submit-score.js
-import quizData from '../../quiz_data.js';
 
 // IMPORTANT: Set these environment variables in your Netlify project settings
 const { createClient } = require('@supabase/supabase-js');
@@ -19,6 +18,13 @@ const pillarMapping = {
     "Impact": "Psychological"
 };
 
+// Hardcoded categories based on quiz_data.js to avoid CommonJS/ESM import issues in Netlify Functions
+const questionCategories = [
+    "Agency", "Environment", "Psychology", "Systems", "Focus",
+    "Social", "Psychology", "Systems", "Creation", "Environment",
+    "Psychology", "Social", "Agency", "Systems", "Impact"
+];
+
 function getPillarScores(answers) {
     const scores = {
         Physiological: 0,
@@ -28,9 +34,9 @@ function getPillarScores(answers) {
     };
 
     answers.forEach((score, index) => {
-        const question = quizData[index];
-        if (question) {
-            const pillar = pillarMapping[question.category];
+        const category = questionCategories[index];
+        if (category) {
+            const pillar = pillarMapping[category];
             if (pillar) {
                 scores[pillar] += score;
             }

@@ -5,9 +5,15 @@
   "main": "index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "netlify dev"
+    "dev": "netlify dev",
+    "build:css": "npx tailwindcss -i ./public/styles.css -o ./public/build.css"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.100.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.27",
+    "postcss-cli": "^11.0.1",
+    "tailwindcss": "^4.2.2"
   }
 }
