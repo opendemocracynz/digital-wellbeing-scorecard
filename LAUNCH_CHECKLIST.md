@@ -55,8 +55,8 @@ launch if marked **(blocking)**.
 - [ ] **Verify in Supabase directly** (Table Editor) that:
   - [ ] A new `research_data` row appeared with the correct total/archetype/pillar scores.
   - [ ] A new (or updated) `marketing_leads` row appeared with the correct email, segment, score.
-  - [ ] `research_data.user_email` got backfilled to match, if you've decided to keep that linkage
-        (see PROJECT_CONTEXT.md §4 — resolve the privacy decision before checking this box).
+  - [ ] `research_data.user_email` got backfilled to match (this linkage is intentional — see
+        PROJECT_CONTEXT.md §4).
 - [ ] Simulate a backend failure (e.g. temporarily rename/break an env var) and confirm the UI shows a
       graceful error message rather than a blank screen or console-only failure. Revert after testing.
 
@@ -71,16 +71,20 @@ launch if marked **(blocking)**.
 - [ ] "Cancel and return to results" link (or equivalent) works.
 - [ ] Archetype name shown on the checkout page matches the user's actual result.
 
-## 7. Email service **(blocking — at minimum, transactional signup confirmation)**
-- [ ] Subscribing sends a real email via MailerSend (not just a DB write) confirming signup and showing
-      the user's score/archetype.
-- [ ] Email arrives promptly (a minute or two), isn't caught by spam filters in a basic test, and renders
-      correctly on mobile mail clients.
-- [ ] Sender address/name look legitimate (not a placeholder like `scorecard@digitalwellbeing.com` if
-      that domain isn't actually controlled by ODNZ).
-- [ ] `MAILERSEND_API_KEY` is set on Netlify and the template ID referenced is a real, published template
-      (not the `"your_template_id"` placeholder in `emailService.js`).
-- [ ] Unsubscribe link in the email actually works and sets `unsubscribed_from_sequences = true`.
+## 7. Email service
+- [x] Subscribing sends a real email via MailerSend confirming signup and showing the user's
+      score/archetype/4-pillar breakdown. Built and confirmed working 2026-07-30 (custom HTML in
+      `netlify/functions/lib/welcome-email.js`, not a MailerSend dashboard template).
+- [x] Sender is `hello@digitalwellbeingscore.app` — real, ODNZ-controlled domain with SPF + DKIM
+      configured via MailerSend domain verification.
+- [x] Unsubscribe link works — `unsubscribe_lead()` RPC + `netlify/functions/unsubscribe.js`. Note: it's
+      unauthenticated (email in the URL, no token) — accepted tradeoff, see PROJECT_CONTEXT.md §5.
+- [ ] **(blocking) Deliverability**: first live send landed in spam (Outlook). Missing DMARC record was
+      added 2026-07-30 (`_dmarc.digitalwellbeingscore.app`, `p=none`) — re-test a fresh send to Gmail,
+      Outlook, and one other provider before wide launch promotion. Domain has no sending history yet, so
+      don't be surprised if spam placement persists for a while regardless — this needs ongoing
+      monitoring during early launch, not a one-time check.
+- [ ] Email renders correctly on mobile mail clients (Gmail app, Outlook app, Apple Mail).
 
 ## 8. Privacy & copy accuracy **(blocking)**
 - [ ] Public-facing copy (site + any ODNZ privacy policy linked from it) reflects the actual, current data

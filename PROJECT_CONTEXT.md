@@ -13,8 +13,8 @@
 
 ## 1. Stack
 
-* Vanilla JS (ES modules), Tailwind CSS, Netlify Functions (Node, CommonJS), Supabase (Postgres + RPC).
-* MailerSend is the intended transactional/drip email provider, but is **not yet wired up** — see Roadmap.
+* Vanilla JS (ES modules), Tailwind CSS, Netlify Functions (Node, CommonJS), Supabase (Postgres + RPC),
+  MailerSend (transactional email, sending domain `digitalwellbeingscore.app`).
 * Architecture: "Low-Code Hybrid." No frontend framework. Logic over boilerplate.
 
 ## 2. The 5 Archetypes (scoring output)
@@ -42,10 +42,19 @@ Each answer's `category` maps to one of four pillars, scored separately and stor
 | Social | `score_social` | Social |
 | Cognitive | `score_cognitive` | Systems, Focus, Creation |
 
-A "weakness" concept (lowest-scoring pillar → `primary_weakness_id` 1–4, mapped to a label like
-"Digital Fatigue") exists in the schema and in dead code (`netlify/functions/emailService.js`), but
-**is never actually computed or written** by `submit-score.js`. `primary_weakness_id` is always `null`
-today.
+A "weakness" concept (lowest-scoring pillar, mapped to a label like "Digital Fatigue") exists in the
+schema (`research_data.primary_weakness_id`, 1–4) and in dead code (`netlify/functions/emailService.js`),
+but `submit-score.js` never writes it — `primary_weakness_id` is always `null` in the database.
+
+As of 2026-07-30, the weakest pillar **is** computed, but only at email-send time, in
+`netlify/functions/lib/welcome-email.js::getWeakestPillar()` — not stored back to the DB. Important
+correctness note: the four pillars roll up different numbers of questions (Physiological/Social = 2
+questions each, range 2–10; Cognitive = 5 questions, range 5–25; Psychological = 6 questions, range
+6–30), so comparing raw scores to find the "weakest" one is wrong — it will almost always pick a
+2-question pillar just because its ceiling is lower, not because the user is relatively weaker there.
+`getWeakestPillar()` normalizes each pillar to a 0–100% score before comparing. Any other code that needs
+"weakest pillar" (e.g. if `primary_weakness_id` gets wired up for real) should reuse this normalization,
+not redo the dead code's raw-`Math.min()` approach.
 
 ## 4. Data Architecture & Privacy Model
 
@@ -89,6 +98,22 @@ today.
 * Share buttons and the "Unlock Full Report" button only become visible **after** a successful email
   subscribe (they sit in a `hidden` container that's revealed on subscribe success) — the score/archetype
   itself is always visible without an email.
+* **Day-0 welcome email:** on first-time signup (not repeat retakes), `subscribe.js` sends a branded
+  results email via MailerSend's API — custom HTML built in `netlify/functions/lib/welcome-email.js`
+  (not a MailerSend dashboard template; those proved too fiddly to make match the site's design), with
+  the 4-pillar breakdown and a weakest-pillar callout. Confirmed working end-to-end (real send, rendered
+  correctly, arrived — see deliverability note below). We don't collect a first name (see Known Issues),
+  so the email doesn't personalize a greeting.
+* **Unsubscribe:** `netlify/functions/unsubscribe.js` + `unsubscribe_lead()` RPC set
+  `marketing_leads.unsubscribed_from_sequences = true` for the emailed link. Deliberately unauthenticated
+  (no token) — anyone knowing an email can unsubscribe it. Accepted low-severity tradeoff for now given
+  the time budget; revisit if it's ever abused.
+* **Email deliverability:** first real send landed in spam (Outlook). Diagnosed: SPF and DKIM were
+  correctly configured via MailerSend's domain verification, but there was no DMARC record. Added one
+  2026-07-30 (`_dmarc.digitalwellbeingscore.app`, `p=none` monitoring mode) via Netlify DNS. This should
+  help, but `digitalwellbeingscore.app` is a brand-new sending domain with zero reputation — expect spam
+  placement to keep happening for a while regardless of correct DNS, until the domain "warms up" through
+  consistent sending and recipients marking mail as not-spam. Not a one-time fix; see Roadmap.
 * Payment: `public/payment.html` is a non-functional placeholder — a static "Pay $9.00" button that
   triggers `alert('This is a demo payment gateway...')`. No Stripe or other processor is integrated.
 
@@ -116,12 +141,15 @@ and push a "final" launch build, not to keep iterating on architecture first.
 - **Payment gateway:** replace the `payment.html` placeholder (`alert('demo')`, no processor) with a
   real Stripe integration — hosted Checkout or Payment Element, a Netlify function to create the
   session/verify payment server-side, and a webhook to flip `marketing_leads.has_purchased_report`. Per
-  §4, card data must never pass through this app's own code/DB — Stripe handles it directly.
-- **Email service:** get `MailerSend` actually sending. Minimum for launch is the Day-0 "here's your
-  score" transactional email on signup (currently nothing is sent — `subscribe.js` only writes to the
-  DB). The longer drip sequence (`daily-mailer`) can follow, but *something* should confirm signup by
-  email before launch.
-- Re-run [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) end-to-end once both land.
+  §4, card data must never pass through this app's own code/DB — Stripe handles it directly. The email's
+  "Unlock Your Targeted Action Plan" button currently links to `payment.html?level=N` — update it once
+  the real checkout URL exists.
+- ~~Email service~~ **Done 2026-07-30** — Day-0 welcome email sends via MailerSend on signup. See §5.
+- **Monitor deliverability before/during launch promotion.** A DMARC record was added, but the sending
+  domain has no history yet; watch whether early sends keep landing in spam and ask early recipients to
+  mark "not spam" / add `hello@digitalwellbeingscore.app` as a contact to help the domain warm up. Don't
+  assume this is fully solved.
+- Re-run [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) end-to-end once payment lands.
 
 **P1 — fast-follow (don't block launch, but do soon after)**
 - Finish the compiled-Tailwind build properly (populate `styles.css` with `@tailwind` directives, add a
@@ -152,3 +180,6 @@ and push a "final" launch build, not to keep iterating on architecture first.
 - Fixed the unstyled production site by reverting to the Tailwind CDN script.
 - Retired the "anonymous research data" promise in favor of an explicit, bounded email↔score linkage
   (§4).
+- Built and shipped the Day-0 welcome email (MailerSend, custom HTML, not a dashboard template) and a
+  working unsubscribe endpoint; extended `submit_lead()` to return pillar scores for it.
+- Diagnosed spam placement on the first real send and added the missing DMARC record.
