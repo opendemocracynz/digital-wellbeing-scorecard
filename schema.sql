@@ -100,16 +100,23 @@ BEGIN
         initial_score,
         first_name,
         submission_count,
-        last_research_id
+        last_research_id,
+        quiz_completed_at,
+        last_email_stage
     )
-    VALUES (p_email, p_segment, p_score, p_segment, p_score, p_first_name, 1, p_research_id)
+    VALUES (p_email, p_segment, p_score, p_segment, p_score, p_first_name, 1, p_research_id, now(), 0)
     ON CONFLICT (email) DO UPDATE
     SET
         archetype_segment = EXCLUDED.archetype_segment,
         current_score = EXCLUDED.current_score,
         submission_count = marketing_leads.submission_count + 1,
                 first_name = COALESCE(EXCLUDED.first_name, marketing_leads.first_name),
-                last_research_id = EXCLUDED.last_research_id
+                last_research_id = EXCLUDED.last_research_id,
+                -- Retaking the quiz restarts the 30/90-day check-in clock from this
+                -- new baseline, matching the "we'll remind you in 1 and 3 months"
+                -- promise in the Day-0 email — it's about tracking this attempt.
+                quiz_completed_at = now(),
+                last_email_stage = 0
             RETURNING submission_count, initial_score INTO v_count, v_initial_score;
 
             -- Back-fill the user's email into the research data record

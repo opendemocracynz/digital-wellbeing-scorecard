@@ -9,6 +9,7 @@
     "build:css": "npx tailwindcss -i ./public/styles.css -o ./public/build.css"
   },
   "dependencies": {
+    "@netlify/functions": "^2.8.2",
     "@supabase/supabase-js": "^2.100.1"
   },
   "devDependencies": {
