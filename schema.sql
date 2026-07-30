@@ -87,6 +87,10 @@ AS $func$
 DECLARE
     v_count INTEGER;
     v_initial_score INTEGER;
+    v_physio INTEGER;
+    v_psych INTEGER;
+    v_social INTEGER;
+    v_cognitive INTEGER;
 BEGIN
     INSERT INTO marketing_leads (
         email,
@@ -107,17 +111,53 @@ BEGIN
                 first_name = COALESCE(EXCLUDED.first_name, marketing_leads.first_name),
                 last_research_id = EXCLUDED.last_research_id
             RETURNING submission_count, initial_score INTO v_count, v_initial_score;
-        
+
             -- Back-fill the user's email into the research data record
             UPDATE public.research_data SET user_email = p_email WHERE id = p_research_id AND p_research_id IS NOT NULL;
-            
+
+            -- Fetch pillar scores so the caller can build the results email without a
+            -- separate read (research_data intentionally has no SELECT policy for anon).
+            SELECT score_physiological, score_psychological, score_social, score_cognitive
+            INTO v_physio, v_psych, v_social, v_cognitive
+            FROM public.research_data
+            WHERE id = p_research_id;
+
             IF v_count > 1 THEN        RETURN jsonb_build_object(
             'status', 'updated',
             'message', 'Welcome back! Profile updated.',
-            'score_diff', (p_score - v_initial_score)
+            'score_diff', (p_score - v_initial_score),
+            'score_physiological', v_physio,
+            'score_psychological', v_psych,
+            'score_social', v_social,
+            'score_cognitive', v_cognitive
         );
     ELSE
-        RETURN jsonb_build_object('status', 'inserted', 'message', 'Thank you for subscribing!');
+        RETURN jsonb_build_object(
+            'status', 'inserted',
+            'message', 'Thank you for subscribing!',
+            'score_physiological', v_physio,
+            'score_psychological', v_psych,
+            'score_social', v_social,
+            'score_cognitive', v_cognitive
+        );
     END IF;
+END;
+$func$;
+
+-- RPC: Unsubscribe a lead from the email sequence.
+-- SECURITY DEFINER + narrow scope (only this one flag) so the unsubscribe link in
+-- emails can call it with the anon key without needing broader UPDATE access to
+-- marketing_leads (which has no UPDATE policy for anon by design).
+CREATE OR REPLACE FUNCTION unsubscribe_lead(p_email TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $func$
+BEGIN
+    UPDATE public.marketing_leads
+    SET unsubscribed_from_sequences = true
+    WHERE email = p_email;
+
+    RETURN jsonb_build_object('status', 'unsubscribed');
 END;
 $func$;
