@@ -226,7 +226,9 @@ function updateProgressBar() {
             unseen: 'bg-slate-700 border-slate-500'
         };
 
-        return `<span class="w-3 h-3 rounded-full border ${stateClasses[state]} transition-all duration-200" title="Question ${question.id}: ${state}"></span>`;
+        const endpointLabel = index === 0 || index === quizData.length - 1 ? question.id : '';
+        const nodeSize = endpointLabel ? 'w-5 h-5 text-[7px]' : 'w-3 h-3';
+        return `<span class="${nodeSize} flex-shrink-0 rounded-full border ${stateClasses[state]} transition-all duration-200 flex items-center justify-center font-bold" title="Question ${question.id}: ${state}">${endpointLabel}</span>`;
     }).join('<span class="h-px flex-1 bg-slate-600"></span>');
 
     progressContainer.innerHTML = `
