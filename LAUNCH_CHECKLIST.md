@@ -96,9 +96,8 @@ launch if marked **(blocking)**.
       ships to more users.
 
 ## 9. Things explicitly OK to launch without (not blocking)
-- Real Day 3/10 story content — `scheduled-drip.js` is live and will fire on schedule, but those two
-  stages currently send placeholder copy (see PROJECT_CONTEXT.md §5) until the founder-narrative text is
-  written. Fine to launch before that's filled in; just don't forget it's placeholder in production.
+- Final compiled-Tailwind cleanup — the current CDN styling path works, but choose and document one
+      production styling path before treating the repository as clean (see PROJECT_CONTEXT.md §7 P2).
 - Live verification of the Day 3/10/30/90 sends against a real inbox — only Day 0 and the underlying
   `quiz_completed_at` fix have been tested end-to-end so far. Worth a manual check once real leads reach
   those stages, but not a reason to hold launch.

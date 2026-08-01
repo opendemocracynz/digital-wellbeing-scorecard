@@ -171,9 +171,9 @@ not redo the dead code's raw-`Math.min()` approach.
   Scheduled Function, confirmed registered with `schedule: "@daily"` after deploy — see
   `searchSiteFunctions` API) and sends, per lead, whichever of Day 3 / 10 / 30 / 90 they've newly crossed
   since `quiz_completed_at`:
-  - **Day 3 / 10** carry the founder narrative (Rakesh's own turnaround story, told in two parts). Content
-    is **placeholder text** in `netlify/functions/lib/drip-email.js` — real copy is pending (see writing
-    spec below). Everything else about them (send timing, subject, unsubscribe link) is live.
+  - **Day 3 / 10** carry the founder narrative (Rakesh's own turnaround story, told in two parts). The
+    polished copy, subjects, CTAs, and unsubscribe link are live in `netlify/functions/lib/drip-email.js`.
+    Existing leads already past these stages will not be resent automatically.
   - **Day 30** is a real, working progress-recap + retake-CTA email.
   - **Day 90** is a real, working progress-recap + retake-CTA email **plus a free poster PDF**, delivered
     via `netlify/functions/download-poster.js` (a signed URL from Supabase Storage's private `reports`
@@ -285,11 +285,20 @@ Before changing the UI again, decide and test these points:
 6. Test the revised post-signup layout on mobile first, then compare report CTA clicks and signup-to-CTA
   conversion against the current version before removing the explorer.
 
-**P2 — cleanup**
-- Delete `netlify/functions/emailService.js` and the now-fully-superseded `daily-mailer/index.ts` (dead
-  code, not deployed, doubly so now).
-- Collapse the duplicate `quiz_data.js` into one file both the frontend and the Netlify function import
-  from.
+**P2 — cleanup and launch hygiene**
+- **Remove redundant configuration and dead paths before launch:** choose one styling/build path. The
+  app currently runs Tailwind through the CDN in `public/index.html`, while `tailwind.config.js`,
+  `postcss.config.js`, the `build:css` script, and the empty `public/styles.css` describe an unused
+  compiled-CSS path. Either complete the compiled build and remove the CDN dependency, or remove the
+  unused build configuration and script. Do not leave two competing production paths.
+- Delete `netlify/functions/emailService.js` and the now-fully-superseded `daily-mailer/index.ts` after
+  confirming no deployment references them. The `daily-mailer/index.ts` edit currently in the working
+  tree is separate and must be reviewed or discarded deliberately before deletion.
+- Collapse the duplicate `quiz_data.js` into one source of truth, updating the Netlify function import or
+  shared data boundary as needed, then run the score-boundary checks.
+- Run a final repository hygiene pass: search for placeholder copy, demo payment text, stale template IDs,
+  unused environment variables, and documentation that contradicts the deployed app. Record each item as
+  removed, intentionally retained, or deferred with an owner and reason.
 
 **Done this session (for context, not action items)**
 - Fixed `submit-score.js` crashing on every call from an ESM import inside a CommonJS function.
