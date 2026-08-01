@@ -212,8 +212,9 @@ not redo the dead code's raw-`Math.min()` approach.
    reference but nothing points to it; safe to delete whenever convenient (P2 below).
 4. Duplicate `quiz_data.js` (repo root + `public/`) — two sources of truth that must be hand-kept in sync.
 5. `research_data.country_code` and `.primary_weakness_id` are schema columns nothing ever populates.
-6. `netlify/functions/lib/drip-email.js`'s Day 3 and Day 10 content is placeholder text pending the
-   founder-narrative copy (see Roadmap).
+6. The results-page post-signup experience needs a deliberate conversion pass; the current profile
+  explorer and weakness tease are useful, but their relationship to the email CTA and paid report is
+  not yet settled.
 
 ## 7. Roadmap (prioritized)
 
@@ -236,8 +237,8 @@ and push a "final" launch build, not to keep iterating on architecture first.
 - Re-run [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) end-to-end once payment lands.
 
 **P1 — fast-follow (don't block launch, but do soon after)**
-- **Write the Day 3/10 founder-narrative copy** (spec already given, pending Rakesh's writing session) and
-  drop it into `netlify/functions/lib/drip-email.js`'s `buildStory1`/`buildStory2`.
+- ~~Write the Day 3/10 founder-narrative copy~~ **Done 2026-08-01** — polished copy with CTAs is live in
+  `netlify/functions/lib/drip-email.js`'s `buildStory1`/`buildStory2`.
 - **Fix the 5 report PDFs**: "Zombie Click slave" → "Zombie Clickslave", and correct the `DS-ARCH-L4` /
   `DWS-ARCH-L4` header codes to the right prefix + level per file. Re-upload to the `reports` Storage
   bucket once fixed.
@@ -255,6 +256,34 @@ and push a "final" launch build, not to keep iterating on architecture first.
   email-send-time calculation that already exists.
 - Watch the first live Day 3/10/30/90 sends once real leads reach those stages — nothing has exercised
   this path against a real inbox yet (only the Day-0 path and the SQL fix have been verified).
+
+### Results-page refinement to resolve next
+
+The current design supports two different jobs and should keep them distinct:
+
+* **Before email signup:** let people explore the five profiles so they do not retake the quiz just to
+  understand the range. Keep the profile selector and the user's result visible.
+* **After email signup:** shift attention from exploration to action. Consider reducing the profile
+  exploration prominence, retaining the user's profile and weakest-pillar tease, and making the report
+  offer the clear primary CTA.
+
+Before changing the UI again, decide and test these points:
+
+1. Move the personalised weakness message into the post-signup/action area, or repeat a short version
+  beside the report CTA. Do not remove the weakness insight entirely; it is the strongest bridge from
+  the free result to a useful paid action plan.
+2. Define the post-signup hierarchy: primary report CTA, secondary share action, and optional profile
+  exploration. The report should be presented as a product with a small preview or sample page, not
+  merely as a download or PDF.
+3. Decide whether profile exploration remains available after signup as a collapsed or secondary
+  control. Preserve it if it helps users understand the archetype system, but keep it from competing
+  with the report CTA.
+4. Decide what the email CTA promises: a weakness-specific action plan, a full archetype report, or
+  both. The page, welcome email, and payment page should use the same promise and price.
+5. Add analytics for `profile_explored`, `post_signup_report_viewed`, and `report_preview_clicked` before
+  testing the redesign, so we can tell whether people explore, read the offer, and move toward purchase.
+6. Test the revised post-signup layout on mobile first, then compare report CTA clicks and signup-to-CTA
+  conversion against the current version before removing the explorer.
 
 **P2 — cleanup**
 - Delete `netlify/functions/emailService.js` and the now-fully-superseded `daily-mailer/index.ts` (dead
