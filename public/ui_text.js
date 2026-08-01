@@ -20,6 +20,7 @@ const uiText = {
         "score_label": "Score",
         "subscribe_cta_main": "Sign-up for more information",
         "subscribe_cta_details": "Level up! Learn more about what your score means, explain how to improve your digital wellbeing, plus automatic retest reminder to track progress.",
+        "campaign_cta_details": "See what your score means and get a practical plan to improve your digital wellbeing, with a reminder to retest later.",
         "email_placeholder": "Enter your email",
         "subscribe_button": "Subscribe",
         "claim_badge_button": "Claim Archetype Badge",

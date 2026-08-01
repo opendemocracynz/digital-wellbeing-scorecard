@@ -1,5 +1,6 @@
 import quizData from './quiz_data.js';
 import uiText from './ui_text.js';
+import { getCampaignCta, track } from './analytics.js';
 
 const archetypeDetails = uiText.archetypes;
 
@@ -74,7 +75,10 @@ function populateText() {
     const primaryCta = document.getElementById('primary-cta');
     primaryCta.querySelector('p:first-of-type').innerHTML = uiText.results.subscribe_cta_main;
     primaryCta.querySelector('p:first-of-type').className = "text-xs text-slate-500 uppercase tracking-widest mb-2";
-    primaryCta.querySelector('p:nth-of-type(2)').innerHTML = uiText.results.subscribe_cta_details;
+    primaryCta.querySelector('p:nth-of-type(2)').innerHTML = getCampaignCta(
+        uiText.results.subscribe_cta_details,
+        uiText.results.campaign_cta_details
+    );
     emailInput.placeholder = uiText.results.email_placeholder;
     subscribeForm.querySelector('button').textContent = uiText.results.subscribe_button;
     primaryCta.querySelector('p:last-of-type').innerHTML = `<i>${uiText.results.unsubscribe_info}</i>`;
@@ -142,6 +146,7 @@ function createSplashScreen() {
     resultContainer.classList.add('hidden');
 
     document.getElementById('start-btn').addEventListener('click', () => {
+        track('quiz_started', { resumed: hasSavedData });
         splash.classList.add('opacity-0', 'transition-opacity', 'duration-500');
         setTimeout(() => {
             splash.remove();
@@ -153,6 +158,10 @@ function createSplashScreen() {
 
 function renderQuestion() {
     const question = quizData[quizState.currentQuestionIndex];
+    track('question_viewed', {
+        question_number: question.id,
+        question_category: question.category,
+    }, { once: true });
     const icon = categoryIcons[question.category] || '❓';
     
     // Update Progress Bar (Inject if missing)
@@ -222,6 +231,10 @@ function updateProgressBar() {
 }
 
 function selectAnswer(score) {
+    track('question_answered', {
+        question_number: quizState.currentQuestionIndex + 1,
+        question_category: quizData[quizState.currentQuestionIndex].category,
+    });
     quizState.answers[quizState.currentQuestionIndex] = score;
     saveState();
     renderQuestion();
@@ -297,6 +310,7 @@ function getArchetype(score) {
 async function finishQuiz() {
     const totalScore = quizState.answers.reduce((acc, score) => acc + score, 0);
     const archetype = getArchetype(totalScore);
+    track('quiz_completed', { total_score: totalScore, archetype_level: archetype.level });
 
     // Show loading state
     nextBtn.textContent = uiText.quiz.calculating_button;
@@ -325,6 +339,10 @@ async function finishQuiz() {
 }
 
 function displayResults(archetype, totalScore) {
+    track('results_viewed', {
+        total_score: totalScore,
+        archetype_level: archetype.level,
+    }, { once: true });
     window.scrollTo(0, 0); 
     console.log('Displaying results:', { archetype, totalScore });
     quizContainer.classList.add('hidden');
@@ -462,6 +480,7 @@ function updateProfileCard(level, userScore, isUserResult) {
         btn.href = `payment.html?level=${level}`;
         btn.className = 'block w-full text-center bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg mt-6 transition-all transform hover:scale-105 uppercase tracking-widest border border-yellow-400';
         btn.innerHTML = uiText.results.unlock_report_button;
+        btn.addEventListener('click', () => track('report_cta_clicked', { archetype_level: level }));
         secondaryCtas.appendChild(btn);
     }
 
@@ -494,6 +513,7 @@ function addShareButtons(archetype, score) {
     const copyBtn = document.getElementById('copy-btn');
 
     copyBtn.onclick = () => {
+        track('share_clicked', { share_type: 'copy' });
         navigator.clipboard.writeText(shareMessage).then(() => {
             const originalText = copyBtn.innerHTML;
             copyBtn.innerHTML = uiText.results.copied_button;
@@ -508,6 +528,7 @@ function addShareButtons(archetype, score) {
 
 async function handleSubscription(event) {
     event.preventDefault();
+    track('signup_submitted');
     const email = emailInput.value;
     const totalScore = quizState.answers.reduce((acc, score) => acc + score, 0);
     const archetype = getArchetype(totalScore);
@@ -544,6 +565,7 @@ async function handleSubscription(event) {
                 subscribeMessage.textContent = data.message;
             }
             subscribeMessage.classList.add('text-green-600');
+            track('signup_completed');
             emailInput.value = '';
 
             // Clear the saved quiz state
@@ -554,11 +576,13 @@ async function handleSubscription(event) {
             document.getElementById('secondary-ctas').classList.remove('hidden');
 
         } else {
+            track('signup_failed', { status_code: response.status });
             subscribeMessage.textContent = data.error || uiText.results.subscription.error;
             subscribeMessage.classList.add('text-red-600');
             console.error("Subscription failed:", data);
         }
     } catch (error) {
+        track('signup_failed', { error_type: 'network' });
         console.error("Error subscribing:", error);
         subscribeMessage.textContent = uiText.results.subscription.error;
         subscribeMessage.classList.add('text-red-600');
@@ -572,6 +596,15 @@ async function handleSubscription(event) {
 // nextBtn listener is now handled dynamically in renderQuestion/startAutoAdvance
 prevBtn.addEventListener('click', prevQuestion);
 subscribeForm.addEventListener('submit', handleSubscription);
+emailInput.addEventListener('focus', () => track('signup_started', {}, { once: true }));
+
+window.addEventListener('pagehide', () => {
+    if (!resultContainer.classList.contains('hidden')) return;
+    track('quiz_abandoned', {
+        last_question_number: quizState.currentQuestionIndex + 1,
+        answered_questions: quizState.answers.filter((score) => score !== 0).length,
+    });
+});
 
 // Initial render
 initApp();

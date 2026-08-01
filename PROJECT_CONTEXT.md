@@ -17,6 +17,34 @@
   MailerSend (transactional email, sending domain `digitalwellbeingscore.app`).
 * Architecture: "Low-Code Hybrid." No frontend framework. Logic over boilerplate.
 
+## 1a. Analytics and campaign tracking
+
+The site has an optional Google Analytics 4 integration in `public/analytics.js`. It is deliberately
+disabled until a GA4 Web stream ID is placed in `public/index.html` as
+`window.DWS_GA_MEASUREMENT_ID = 'G-...'`. No quiz events or analytics requests are sent while that
+value is blank.
+
+The app sends these events to GA4, without sending email addresses or raw answer values:
+
+* `quiz_started` — includes whether this was a resumed session.
+* `question_viewed` and `question_answered` — include question number and category.
+* `quiz_completed` and `results_viewed` — include score and archetype level.
+* `quiz_abandoned` — includes the last question reached and answered-question count.
+* `signup_started`, `signup_submitted`, `signup_completed`, and `signup_failed`.
+* `share_clicked` and `report_cta_clicked`.
+
+The helper also retains the first campaign's `utm_source`, `utm_medium`, `utm_campaign`,
+`utm_content`, and `utm_term` in local storage so a visitor who completes the quiz later remains
+attributed to the campaign. Example campaign links:
+
+* `/?utm_source=linkedin&utm_medium=organic&utm_campaign=founder-story`
+* `/?utm_source=meta&utm_medium=paid_social&utm_campaign=attention-reset&utm_content=parent-creative-a`
+
+Campaign traffic currently receives a modest alternative signup message. It does not pretend to be
+deep personalisation: add more variants only after GA4 shows that a specific audience or message is
+meaningfully different. In GA4, register `question_number`, `question_category`, `archetype_level`,
+`dws_session_id`, `utm_campaign`, and `utm_content` as event-scoped custom dimensions if they are needed in reports.
+
 ## 2. The 5 Archetypes (scoring output)
 
 15-question quiz, 1–5 points per question, total range 15–75:
