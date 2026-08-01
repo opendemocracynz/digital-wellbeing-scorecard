@@ -27,7 +27,7 @@ value is blank.
 The app sends these events to GA4, without sending email addresses or raw answer values:
 
 * `quiz_started` — includes whether this was a resumed session.
-* `question_viewed` and `question_answered` — include question number and category.
+* `question_viewed`, `question_answered`, and `question_skipped` — include question number and category.
 * `quiz_completed` and `results_viewed` — include score and archetype level.
 * `quiz_abandoned` — includes the last question reached and answered-question count.
 * `signup_started`, `signup_submitted`, `signup_completed`, and `signup_failed`.

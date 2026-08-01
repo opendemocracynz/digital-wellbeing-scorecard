@@ -269,6 +269,13 @@ function startAutoAdvance() {
 function nextQuestion() {
     if (autoAdvanceTimer) clearInterval(autoAdvanceTimer);
     if (quizState.currentQuestionIndex < quizData.length - 1) {
+        if (quizState.answers[quizState.currentQuestionIndex] === 0) {
+            const question = quizData[quizState.currentQuestionIndex];
+            track('question_skipped', {
+                question_number: question.id,
+                question_category: question.category,
+            }, { once: true });
+        }
         quizState.currentQuestionIndex++;
         renderQuestion();
     } else {
@@ -286,6 +293,15 @@ function nextQuestion() {
                 }
                 return;
             }
+            quizState.answers.forEach((score, index) => {
+                if (score === 0) {
+                    const question = quizData[index];
+                    track('question_skipped', {
+                        question_number: question.id,
+                        question_category: question.category,
+                    }, { once: true });
+                }
+            });
         }
         finishQuiz();
     }
