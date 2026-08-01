@@ -1,8 +1,7 @@
 // netlify/functions/lib/drip-email.js
 //
 // Builds the Day 3 / 10 / 30 / 90 follow-up emails. Day 3 and 10 carry the founder
-// narrative and are placeholders until that copy is written (see PROJECT_CONTEXT.md) —
-// everything else (subject, structure, CTA, unsubscribe link) is real and functional.
+// narrative; the remaining stages are progress check-ins and a free poster offer.
 
 const { ARCHETYPES } = require('./archetypes');
 
@@ -60,8 +59,18 @@ function buildStory1(lead) {
     const subject = "I was a Zombie Clickslave too";
     const body = `
         <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            [[PLACEHOLDER — Story Part 1: the rock-bottom moment and the turning point. See PROJECT_CONTEXT.md writing spec. 150-250 words.]]
+            I had high expectations of myself and big dreams for what I could achieve, so I was always giving it 110%. I told myself I was getting ahead: clearing a few extra emails from my phone after dinner, or doing a little more research before bed.
         </p>
+        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
+            At first I barely noticed the change. Then I reached burnout, and the phone stopped being a tool for work. I started doomscrolling to avoid work instead. Midnight became 2am. I was not sleeping, but I was not really working either. Even when I put the phone down, my mind kept circling the same thoughts.
+        </p>
+        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
+            I became angry and moody, and took it out on the people I cared about most. Slowly, and later than I wish I had, I realised I was trapped in endless information and using my screen to avoid the real world. I had lost countless hours of sleep, quality time, and productive time I would never get back. I felt trapped and alone, and I knew I needed to change, even though I did not yet know how.
+        </p>
+        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
+            For now, notice one moment when you reach for your phone to avoid something else. Naming the habit is where my journey began.
+        </p>
+        ${retakeButton('Revisit the Scorecard')}
         <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1; font-style: italic;">Next time: what actually changed.</p>
     `;
     return { subject, body };
@@ -71,9 +80,17 @@ function buildStory2(lead) {
     const subject = "What actually changed";
     const body = `
         <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            [[PLACEHOLDER — Story Part 2: the concrete habits/systems that worked and where things stand now. Optional callback to the reader's own weakest pillar. See PROJECT_CONTEXT.md writing spec. 150-250 words.]]
+            I did not go cold turkey at first. I thought I could beat the habit by simply putting my phone away, but every phone call or alarm put it back in my hand, and my usage crept up again. I could never stay away long enough for that approach to change anything.
         </p>
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">We'll check in with you again in a month, and again in three, to see how you're tracking.</p>
+        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
+            What helped was making the boundary harder to negotiate. I set strict time limits, turned the phone off, and disabled alarms when I needed real rest. I also asked my family for help. I gave my wife and kids permission to interrupt me, demand my attention, and call me back when I disappeared into the screen. They had tried before, but I had quietly pushed them away. This time I let them draw me back into myself. It felt good to feel present, loved, and wanted again.
+        </p>
+        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
+            Eventually, going cold turkey helped too, but it was not permanent. The freedom I felt outdoors and playing with my family helped me put the old habits in context. Today I still use technology every day for work and to stay in touch, but it serves me and I am more often in control. The breaks matter, but the habits I use while I am online are what keep things in check.
+        </p>
+        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">Your result points to a starting place, not a verdict. Try one boundary that protects the area you most want to change, then give it time to become familiar.</p>
+        ${retakeButton('Retake the Scorecard')}
+        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">We'll check in again in a month, and again in three, so you can see what has actually shifted.</p>
     `;
     return { subject, body };
 }
