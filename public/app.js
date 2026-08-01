@@ -210,24 +210,34 @@ function updateProgressBar() {
     if (!progressContainer) {
         progressContainer = document.createElement('div');
         progressContainer.id = 'progress-container';
-        progressContainer.className = 'w-full bg-slate-700 h-2 rounded-full mb-8 overflow-hidden flex items-center';
+        progressContainer.className = 'w-full mb-8';
         quizContainer.insertBefore(progressContainer, quizContainer.firstChild);
-        
-        const bar = document.createElement('div');
-        bar.id = 'progress-bar';
-        bar.className = 'bg-blue-500 h-full transition-all duration-300 ease-out';
-        bar.style.width = '0%';
-        progressContainer.appendChild(bar);
-
-        const total = document.createElement('div');
-        total.id = 'progress-total';
-        total.className = 'ml-2 bg-slate-600 text-xs font-bold text-white rounded-full h-6 w-6 flex items-center justify-center';
-        total.textContent = quizData.length;
-        progressContainer.appendChild(total);
     }
-    
-    const progress = (quizState.currentQuestionIndex / (quizData.length -1)) * 100;
-    document.getElementById('progress-bar').style.width = `${progress}%`;
+
+    const nodes = quizData.map((question, index) => {
+        const isCurrent = index === quizState.currentQuestionIndex;
+        const isAnswered = quizState.answers[index] !== 0;
+        const isSkipped = index < quizState.currentQuestionIndex && !isAnswered;
+        const state = isCurrent ? 'current' : (isAnswered ? 'completed' : (isSkipped ? 'skipped' : 'unseen'));
+        const stateClasses = {
+            current: 'bg-blue-400 border-white ring-2 ring-blue-400/40 scale-125',
+            completed: 'bg-green-400 border-green-200',
+            skipped: 'bg-orange-400 border-orange-200',
+            unseen: 'bg-slate-700 border-slate-500'
+        };
+
+        return `<span class="w-3 h-3 rounded-full border ${stateClasses[state]} transition-all duration-200" title="Question ${question.id}: ${state}"></span>`;
+    }).join('<span class="h-px flex-1 bg-slate-600"></span>');
+
+    progressContainer.innerHTML = `
+        <div class="flex items-center gap-1" aria-label="Question progress">
+            ${nodes}
+        </div>
+        <div class="flex items-center justify-between mt-3 text-xs uppercase tracking-widest">
+            <span class="text-blue-300">Question ${quizState.currentQuestionIndex + 1} of ${quizData.length}</span>
+            <span class="text-slate-500"><i class="inline-block w-2 h-2 rounded-full bg-green-400 mr-1"></i>Answered <i class="inline-block w-2 h-2 rounded-full bg-orange-400 ml-3 mr-1"></i>Skipped</span>
+        </div>
+    `;
 }
 
 function selectAnswer(score) {
@@ -323,6 +333,31 @@ function getArchetype(score) {
     return { level: 0, name: 'Unknown' };
 }
 
+const pillarDefinitions = {
+    Physiological: { min: 2, max: 10, weakness: 'Digital Fatigue', categories: ['Environment'] },
+    Psychological: { min: 6, max: 30, weakness: 'Mental Overload', categories: ['Agency', 'Psychology', 'Impact'] },
+    Social: { min: 2, max: 10, weakness: 'Connection Gap', categories: ['Social'] },
+    Cognitive: { min: 5, max: 25, weakness: 'Information Haze', categories: ['Systems', 'Focus', 'Creation'] },
+};
+
+function getWeakestPillar(answers) {
+    const scores = Object.fromEntries(Object.keys(pillarDefinitions).map((pillar) => [pillar, 0]));
+
+    answers.forEach((score, index) => {
+        const category = quizData[index].category;
+        const pillar = Object.keys(pillarDefinitions).find((key) => pillarDefinitions[key].categories.includes(category));
+        if (pillar) scores[pillar] += score;
+    });
+
+    return Object.keys(pillarDefinitions).reduce((weakest, pillar) => {
+        const definition = pillarDefinitions[pillar];
+        const percent = ((scores[pillar] - definition.min) / (definition.max - definition.min)) * 100;
+        return !weakest || percent < weakest.percent
+            ? { name: pillar, weakness: definition.weakness, percent }
+            : weakest;
+    }, null);
+}
+
 async function finishQuiz() {
     const totalScore = quizState.answers.reduce((acc, score) => acc + score, 0);
     const archetype = getArchetype(totalScore);
@@ -367,6 +402,8 @@ function displayResults(archetype, totalScore) {
     // 1. Render the Interactive Gauge
     renderGauge(totalScore, archetype.level);
 
+    const weakest = getWeakestPillar(quizState.answers);
+
     // 2. Inject Persistent "Your Result" Header
     // This ensures the user always knows their actual score while exploring
     const gauge = document.getElementById('score-gauge');
@@ -394,7 +431,7 @@ function displayResults(archetype, totalScore) {
     }
 
     // 3. Render the Main Profile Card (Defaults to user's result)
-    updateProfileCard(archetype.level, totalScore, true);
+    updateProfileCard(archetype.level, totalScore, true, weakest);
     
     // 4. Add Social Share Buttons
     addShareButtons(archetype, totalScore);
@@ -454,7 +491,7 @@ window.updateProfileView = function(level) {
     updateProfileCard(level, null, false);
 };
 
-function updateProfileCard(level, userScore, isUserResult) {
+function updateProfileCard(level, userScore, isUserResult, focusArea = null) {
     const data = archetypeDetails[level];
     
     // Calculate position for the call-out arrow
@@ -480,7 +517,7 @@ function updateProfileCard(level, userScore, isUserResult) {
             <img src="${data.img}" class="w-24 h-24 rounded-full border-4 border-slate-700 shadow-2xl mb-3 bg-slate-800 object-cover">
             <span class="${data.color} text-sm font-bold tracking-widest uppercase mb-1">LEVEL ${level}</span>
             <h3 class="text-2xl font-bold text-white mb-2 ${data.color}">${data.name}</h3>
-            <p class="text-slate-300 text-base leading-relaxed">${data.desc}</p>
+            <p class="text-slate-300 text-base leading-relaxed">${isUserResult && focusArea ? `Your focus area: <strong class="text-white">${focusArea.weakness}</strong>. This is the area where a small, deliberate change may give you the greatest lift.` : data.desc}</p>
         </div>
     `;
     

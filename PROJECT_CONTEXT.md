@@ -45,6 +45,29 @@ deep personalisation: add more variants only after GA4 shows that a specific aud
 meaningfully different. In GA4, register `question_number`, `question_category`, `archetype_level`,
 `dws_session_id`, `utm_campaign`, and `utm_content` as event-scoped custom dimensions if they are needed in reports.
 
+## 1b. Founder story writing brief
+
+The live follow-up sequence is `netlify/functions/scheduled-drip.js` using
+`netlify/functions/lib/drip-email.js`. The older `daily-mailer/index.ts` is superseded reference code
+and should not be completed or deployed: it uses the old Day 5/15/50/70 cadence, stale template IDs,
+old archetype names, and incomplete content structures.
+
+Write the two live story emails as follows:
+
+* **Day 3 — the low point and the turn:** 150–250 words. Describe one recognisable moment when
+  technology was clearly running your attention, mood, sleep, or relationships. Name the cost without
+  dramatising it, then describe the realisation or decision that made change possible. End with a
+  forward reference to the practical changes in the next email.
+* **Day 10 — what actually changed:** 150–250 words. Describe two or three concrete changes you made,
+  why they worked better than willpower, and what remains imperfect. Connect the idea back to the
+  reader's own result without claiming that one system works for everyone. End with an invitation to
+  retake the scorecard after a month or three months.
+
+Use first person, plain language, and one specific detail in each email. Avoid presenting the story as
+medical advice, a guaranteed transformation, or a generic list of productivity tips. The existing
+subject lines are `I was a Zombie Clickslave too` and `What actually changed`; they can be revised if
+the final story suggests a more honest subject.
+
 ## 2. The 5 Archetypes (scoring output)
 
 15-question quiz, 1–5 points per question, total range 15–75:
