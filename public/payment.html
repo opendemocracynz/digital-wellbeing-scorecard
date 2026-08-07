@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Unlock Full Report - Digital Wellbeing</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -36,16 +38,9 @@
             </div>
         </div>
 
-        <!-- Mock Form -->
-        <div class="space-y-3 mb-6 opacity-50 pointer-events-none select-none">
-            <input type="text" value="•••• •••• •••• 4242" class="w-full bg-slate-700 border border-slate-600 rounded p-3 text-white" disabled>
-            <div class="flex gap-3">
-                <input type="text" value="12/25" class="w-1/2 bg-slate-700 border border-slate-600 rounded p-3 text-white" disabled>
-                <input type="text" value="•••" class="w-1/2 bg-slate-700 border border-slate-600 rounded p-3 text-white" disabled>
-            </div>
-        </div>
+        <div id="checkout-status" class="mb-4 hidden rounded-lg border border-slate-700 bg-slate-900/80 p-3 text-sm text-slate-300"></div>
 
-        <button onclick="alert('This is a demo payment gateway. In a live version, this would connect to Stripe.')" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all mb-4">
+        <button id="checkout-btn" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all mb-4">
             Pay $9.00
         </button>
 
@@ -53,8 +48,6 @@
     </div>
 
     <script type="module">
-        import quizData from './quiz_data.js';
-        // Simple lookup since we don't have the full app.js logic here
         const archetypes = {
             1: 'Zombie Clickslave',
             2: 'Unconscious Doomscroller',
@@ -65,10 +58,62 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const level = urlParams.get('level');
-        
+        const status = urlParams.get('status');
+        const sessionId = urlParams.get('session_id');
+        const checkoutBtn = document.getElementById('checkout-btn');
+        const statusEl = document.getElementById('checkout-status');
+
         if (level && archetypes[level]) {
             document.getElementById('report-title').innerHTML = `Unlock <span class="text-yellow-400">${archetypes[level]}</span> Report`;
         }
+
+        if (status === 'success' && sessionId) {
+            checkoutBtn.classList.add('hidden');
+            statusEl.innerHTML = 'Payment confirmed! <a href="/.netlify/functions/download-report?session_id=' +
+                encodeURIComponent(sessionId) + '" class="underline font-bold">Click here to download your report</a>.';
+            statusEl.classList.remove('hidden');
+            statusEl.classList.add('border-green-500', 'text-green-300');
+        } else if (status === 'success') {
+            statusEl.textContent = 'Payment completed, but we could not confirm the session. Please contact support.';
+            statusEl.classList.remove('hidden');
+            statusEl.classList.add('border-red-500', 'text-red-300');
+        }
+
+        if (status === 'cancelled') {
+            statusEl.textContent = 'Checkout was cancelled. No charge was made.';
+            statusEl.classList.remove('hidden');
+            statusEl.classList.add('border-yellow-500', 'text-yellow-300');
+        }
+
+        checkoutBtn.addEventListener('click', async () => {
+            checkoutBtn.disabled = true;
+            checkoutBtn.textContent = 'Preparing checkout...';
+            statusEl.textContent = 'Creating your secure checkout session...';
+            statusEl.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/.netlify/functions/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ level, archetypeName: archetypes[level] || 'your result' })
+                });
+
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.error || 'Unable to start checkout.');
+
+                if (payload.url) {
+                    window.location.href = payload.url;
+                } else {
+                    throw new Error('Checkout session did not return a URL.');
+                }
+            } catch (error) {
+                statusEl.textContent = error.message || 'Checkout could not be started.';
+                statusEl.classList.remove('hidden');
+                statusEl.classList.add('border-red-500', 'text-red-300');
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = 'Pay $9.00';
+            }
+        });
     </script>
 </body>
 </html>

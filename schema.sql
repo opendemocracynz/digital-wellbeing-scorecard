@@ -168,3 +168,22 @@ BEGIN
     RETURN jsonb_build_object('status', 'unsubscribed');
 END;
 $func$;
+
+-- RPC: Flip has_purchased_report after a verified Stripe payment.
+-- SECURITY DEFINER + narrow scope (only this one flag), same rationale as
+-- unsubscribe_lead — the webhook calls this with the anon key rather than the
+-- service_role key, so a bug in signature verification can't expose broader
+-- table access than "mark one email as purchased."
+CREATE OR REPLACE FUNCTION mark_report_purchased(p_email TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $func$
+BEGIN
+    UPDATE public.marketing_leads
+    SET has_purchased_report = true
+    WHERE email = p_email;
+
+    RETURN jsonb_build_object('status', 'purchased', 'found', FOUND);
+END;
+$func$;
