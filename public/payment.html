@@ -19,8 +19,8 @@
         </div>
 
         <div class="mb-6">
-            <div class="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span class="text-4xl">🔓</span>
+            <div id="lock-icon-wrap" class="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span id="lock-icon" class="text-4xl">🔒</span>
             </div>
             <h1 id="report-title" class="text-2xl font-bold text-white mb-2">Unlock Full Report</h1>
             <p class="text-slate-400">Deep dive into your archetype, specific action plans, and resource toolkit.</p>
@@ -29,22 +29,20 @@
         <div class="bg-slate-900 rounded-lg p-4 mb-6 border border-slate-700 text-left">
             <div class="flex justify-between items-center mb-2">
                 <span class="text-slate-300 font-medium">Digital Wellbeing Audit</span>
-                <span class="text-white font-bold">$9.00</span>
+                <span id="price-line" class="text-white font-bold">…</span>
             </div>
             <div class="h-px bg-slate-700 my-2"></div>
             <div class="flex justify-between items-center text-sm">
                 <span class="text-slate-500">Total due</span>
-                <span class="text-yellow-400 font-bold">$9.00</span>
+                <span id="price-total" class="text-yellow-400 font-bold">…</span>
             </div>
         </div>
 
         <div id="checkout-status" class="mb-4 hidden rounded-lg border border-slate-700 bg-slate-900/80 p-3 text-sm text-slate-300"></div>
 
-        <button id="checkout-btn" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all mb-4">
-            Pay $9.00
+        <button id="checkout-btn" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all mb-4" disabled>
+            Pay
         </button>
-
-        <a href="index.html" class="text-slate-500 hover:text-white text-sm underline">Cancel and return to results</a>
     </div>
 
     <script type="module">
@@ -62,13 +60,31 @@
         const sessionId = urlParams.get('session_id');
         const checkoutBtn = document.getElementById('checkout-btn');
         const statusEl = document.getElementById('checkout-status');
+        const lockIconWrap = document.getElementById('lock-icon-wrap');
+        const lockIcon = document.getElementById('lock-icon');
+        const priceLine = document.getElementById('price-line');
+        const priceTotal = document.getElementById('price-total');
 
         if (level && archetypes[level]) {
             document.getElementById('report-title').innerHTML = `Unlock <span class="text-yellow-400">${archetypes[level]}</span> Report`;
         }
 
+        function formatPrice(amountInCents, currency) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: (currency || 'usd').toUpperCase() })
+                .format(amountInCents / 100);
+        }
+
+        let currentPriceLabel = 'Pay';
+
+        function setUnlocked() {
+            lockIconWrap.classList.remove('bg-yellow-500/20');
+            lockIconWrap.classList.add('bg-green-500/20');
+            lockIcon.textContent = '🔓';
+        }
+
         if (status === 'success' && sessionId) {
             checkoutBtn.classList.add('hidden');
+            setUnlocked();
             statusEl.innerHTML = 'Payment confirmed! <a href="/.netlify/functions/download-report?session_id=' +
                 encodeURIComponent(sessionId) + '" class="underline font-bold">Click here to download your report</a>.';
             statusEl.classList.remove('hidden');
@@ -84,6 +100,28 @@
             statusEl.classList.remove('hidden');
             statusEl.classList.add('border-yellow-500', 'text-yellow-300');
         }
+
+        fetch(`/.netlify/functions/get-report-price${level ? `?level=${encodeURIComponent(level)}` : ''}`)
+            .then((response) => response.json())
+            .then(({ amount, currency }) => {
+                const formatted = formatPrice(amount, currency);
+                priceLine.textContent = formatted;
+                priceTotal.textContent = formatted;
+                currentPriceLabel = `Pay ${formatted}`;
+                if (status !== 'success') {
+                    checkoutBtn.textContent = currentPriceLabel;
+                    checkoutBtn.disabled = false;
+                }
+            })
+            .catch(() => {
+                priceLine.textContent = 'See checkout';
+                priceTotal.textContent = 'See checkout';
+                currentPriceLabel = 'Pay Now';
+                if (status !== 'success') {
+                    checkoutBtn.textContent = currentPriceLabel;
+                    checkoutBtn.disabled = false;
+                }
+            });
 
         checkoutBtn.addEventListener('click', async () => {
             checkoutBtn.disabled = true;
@@ -111,7 +149,7 @@
                 statusEl.classList.remove('hidden');
                 statusEl.classList.add('border-red-500', 'text-red-300');
                 checkoutBtn.disabled = false;
-                checkoutBtn.textContent = 'Pay $9.00';
+                checkoutBtn.textContent = currentPriceLabel;
             }
         });
     </script>

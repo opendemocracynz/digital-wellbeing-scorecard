@@ -1,13 +1,6 @@
+const { resolvePriceId, STRIPE_CURRENCY, STRIPE_REPORT_AMOUNT } = require('./lib/pricing');
+
 const SITE_URL = process.env.URL || process.env.SITE_URL || 'http://localhost:8888';
-const STRIPE_CURRENCY = process.env.STRIPE_CURRENCY || 'usd';
-const STRIPE_REPORT_AMOUNT = process.env.STRIPE_REPORT_AMOUNT || '500';
-const LEVEL_PRICE_IDS = {
-    1: process.env.STRIPE_PRICE_ID_LEVEL_1,
-    2: process.env.STRIPE_PRICE_ID_LEVEL_2,
-    3: process.env.STRIPE_PRICE_ID_LEVEL_3,
-    4: process.env.STRIPE_PRICE_ID_LEVEL_4,
-    5: process.env.STRIPE_PRICE_ID_LEVEL_5,
-};
 
 exports.handler = async function (event) {
     if (event.httpMethod !== 'POST') {
@@ -43,7 +36,7 @@ exports.handler = async function (event) {
     params.set('success_url', `${SITE_URL}/payment.html?status=success&level=${encodeURIComponent(level || '')}&session_id={CHECKOUT_SESSION_ID}`);
     params.set('cancel_url', `${SITE_URL}/payment.html?status=cancelled&level=${encodeURIComponent(level || '')}`);
 
-    const priceId = LEVEL_PRICE_IDS[Number(level)] || process.env.STRIPE_PRICE_ID;
+    const priceId = resolvePriceId(level);
     if (priceId) {
         params.set('line_items[0][price]', priceId);
     } else {
