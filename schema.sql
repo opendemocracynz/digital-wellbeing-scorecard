@@ -180,9 +180,12 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $func$
 BEGIN
+    -- Case-insensitive match: subscribe.js stores whatever case the lead typed
+    -- at signup, but the Stripe checkout email arrives lowercased from the
+    -- webhook, so an exact match would silently miss otherwise-valid leads.
     UPDATE public.marketing_leads
     SET has_purchased_report = true
-    WHERE email = p_email;
+    WHERE lower(email) = lower(trim(p_email));
 
     RETURN jsonb_build_object('status', 'purchased', 'found', FOUND);
 END;

@@ -56,6 +56,7 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const level = urlParams.get('level');
+        const email = urlParams.get('email');
         const status = urlParams.get('status');
         const sessionId = urlParams.get('session_id');
         const checkoutBtn = document.getElementById('checkout-btn');
@@ -133,7 +134,7 @@
                 const response = await fetch('/.netlify/functions/create-checkout-session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ level, archetypeName: archetypes[level] || 'your result' })
+                    body: JSON.stringify({ level, archetypeName: archetypes[level] || 'your result', email })
                 });
 
                 const payload = await response.json();

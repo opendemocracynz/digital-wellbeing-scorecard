@@ -44,6 +44,7 @@ const categoryIcons = {
 
 // STORAGE
 const QUIZ_STORAGE_KEY = 'digitalWellbeingQuizState';
+const LEAD_EMAIL_STORAGE_KEY = 'digitalWellbeingLeadEmail';
 
 function saveState() {
     localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(quizState));
@@ -532,7 +533,8 @@ function updateProfileCard(level, userScore, isUserResult, focusArea = null) {
     if (secondaryCtas && !document.getElementById('payment-btn')) {
         const btn = document.createElement('a');
         btn.id = 'payment-btn';
-        btn.href = `payment.html?level=${level}`;
+        const leadEmail = localStorage.getItem(LEAD_EMAIL_STORAGE_KEY);
+        btn.href = `payment.html?level=${level}${leadEmail ? `&email=${encodeURIComponent(leadEmail)}` : ''}`;
         btn.className = 'block w-full text-center bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg mt-6 transition-all transform hover:scale-105 uppercase tracking-widest border border-yellow-400';
         btn.innerHTML = uiText.results.unlock_report_button;
         btn.addEventListener('click', () => track('report_cta_clicked', { archetype_level: level }));
@@ -621,6 +623,11 @@ async function handleSubscription(event) {
             }
             subscribeMessage.classList.add('text-green-600');
             track('signup_completed');
+
+            // Persisted separately from QUIZ_STORAGE_KEY (which gets cleared below)
+            // so payment.html can pre-fill the Stripe Checkout email and guarantee
+            // it matches the marketing_leads row the webhook needs to update.
+            localStorage.setItem(LEAD_EMAIL_STORAGE_KEY, email);
             emailInput.value = '';
 
             // Clear the saved quiz state
