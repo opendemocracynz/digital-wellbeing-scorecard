@@ -2,7 +2,9 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+// Service-role key: mark_report_purchased is not executable by the public anon key
+// (see schema.sql), so only this verified-webhook path can flip has_purchased_report.
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 function getHeader(headers, name) {
@@ -11,11 +13,15 @@ function getHeader(headers, name) {
 }
 
 function getEmailFromSession(session) {
-    const metadataEmail = session?.metadata?.email;
-    const customerEmail = session?.customer_email;
+    // Prefer the email Stripe actually collected; metadata is only what the browser
+    // told create-checkout-session, so it's a last resort.
     const customerDetailsEmail = session?.customer_details?.email;
-    return (metadataEmail || customerEmail || customerDetailsEmail || '').trim().toLowerCase();
+    const customerEmail = session?.customer_email;
+    const metadataEmail = session?.metadata?.email;
+    return (customerDetailsEmail || customerEmail || metadataEmail || '').trim().toLowerCase();
 }
+
+const PURCHASE_EVENTS = ['checkout.session.completed', 'checkout.session.async_payment_succeeded'];
 
 const SIGNATURE_TOLERANCE_SECONDS = 5 * 60;
 
@@ -98,8 +104,17 @@ exports.handler = async function (event) {
         };
     }
 
-    if (stripeEvent.type === 'checkout.session.completed') {
+    if (PURCHASE_EVENTS.includes(stripeEvent.type)) {
         const session = stripeEvent.data?.object || {};
+
+        // 'completed' also fires for delayed payment methods that haven't been paid yet.
+        if (session.payment_status !== 'paid') {
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ received: true, status: 'not_paid' }),
+            };
+        }
+
         const email = getEmailFromSession(session);
 
         if (!email) {

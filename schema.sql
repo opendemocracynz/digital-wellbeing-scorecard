@@ -171,9 +171,8 @@ $func$;
 
 -- RPC: Flip has_purchased_report after a verified Stripe payment.
 -- SECURITY DEFINER + narrow scope (only this one flag), same rationale as
--- unsubscribe_lead — the webhook calls this with the anon key rather than the
--- service_role key, so a bug in signature verification can't expose broader
--- table access than "mark one email as purchased."
+-- unsubscribe_lead. The webhook calls this with the service_role key; EXECUTE is
+-- revoked from anon/public at the bottom of this file.
 CREATE OR REPLACE FUNCTION mark_report_purchased(p_email TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -190,3 +189,9 @@ BEGIN
     RETURN jsonb_build_object('status', 'purchased', 'found', FOUND);
 END;
 $func$;
+
+-- Lock mark_report_purchased to the service role (Postgres grants EXECUTE to PUBLIC by
+-- default). The anon key ships to browsers, so without this anyone could flag any email
+-- as purchased. unsubscribe_lead stays anon-callable: the email unsubscribe link needs it.
+REVOKE EXECUTE ON FUNCTION mark_report_purchased(TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION mark_report_purchased(TEXT) TO service_role;

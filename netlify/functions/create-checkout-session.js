@@ -1,6 +1,7 @@
 const { resolvePriceId, STRIPE_CURRENCY, STRIPE_REPORT_AMOUNT } = require('./lib/pricing');
 
-const SITE_URL = process.env.URL || process.env.SITE_URL || 'http://localhost:8888';
+const SITE_URL = (process.env.URL || process.env.SITE_URL || 'http://localhost:8888').replace(/\/+$/, '');
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 exports.handler = async function (event) {
     if (event.httpMethod !== 'POST') {
@@ -28,13 +29,33 @@ exports.handler = async function (event) {
         };
     }
 
-    const { level, archetypeName, email } = payload;
-    const archetypeLabel = archetypeName || 'your result';
+    const { archetypeName } = payload;
+    const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
+    const levelNumber = Number(payload.level);
+    const level = Number.isInteger(levelNumber) ? levelNumber : null;
+
+    // Reject up front: a session with a level download-report can't map to a PDF
+    // would take payment and then fail to deliver anything.
+    if (level === null || level < 1 || level > 5) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Invalid report level.' }),
+        };
+    }
+
+    if (email && !EMAIL_PATTERN.test(email)) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Invalid email address.' }),
+        };
+    }
+
+    const archetypeLabel = String(archetypeName || 'your result').slice(0, 100);
 
     const params = new URLSearchParams();
     params.set('mode', 'payment');
-    params.set('success_url', `${SITE_URL}/payment.html?status=success&level=${encodeURIComponent(level || '')}&session_id={CHECKOUT_SESSION_ID}`);
-    params.set('cancel_url', `${SITE_URL}/payment.html?status=cancelled&level=${encodeURIComponent(level || '')}`);
+    params.set('success_url', `${SITE_URL}/payment.html?status=success&level=${level}&session_id={CHECKOUT_SESSION_ID}`);
+    params.set('cancel_url', `${SITE_URL}/payment.html?status=cancelled&level=${level}`);
 
     const priceId = resolvePriceId(level);
     if (priceId) {
@@ -47,9 +68,9 @@ exports.handler = async function (event) {
     }
 
     params.set('line_items[0][quantity]', '1');
-    params.set('metadata[level]', String(level || ''));
+    params.set('metadata[level]', String(level));
     params.set('metadata[archetype_name]', archetypeLabel);
-    params.set('metadata[email]', email || '');
+    params.set('metadata[email]', email);
 
     if (email) {
         params.set('customer_email', email);
