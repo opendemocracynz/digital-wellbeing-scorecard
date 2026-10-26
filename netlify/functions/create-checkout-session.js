@@ -1,4 +1,4 @@
-const { resolvePriceId, STRIPE_CURRENCY, STRIPE_REPORT_AMOUNT } = require('./lib/pricing');
+const { resolvePriceId, currencyForRequest, taxBehaviorFor, REPORT_AMOUNT } = require('./lib/pricing');
 
 const SITE_URL = (process.env.URL || process.env.SITE_URL || 'http://localhost:8888').replace(/\/+$/, '');
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -57,12 +57,20 @@ exports.handler = async function (event) {
     params.set('success_url', `${SITE_URL}/payment.html?status=success&level=${level}&session_id={CHECKOUT_SESSION_ID}`);
     params.set('cancel_url', `${SITE_URL}/payment.html?status=cancelled&level=${level}`);
 
+    // Charge in the visitor's local currency (same choice get-report-price made for the
+    // price shown on the page). A Price with currency_options uses its per-currency
+    // amount; the inline fallback is the same flat amount in every currency.
+    const currency = currencyForRequest(event);
+    params.set('currency', currency);
+    params.set('automatic_tax[enabled]', 'true');
+
     const priceId = resolvePriceId(level);
     if (priceId) {
         params.set('line_items[0][price]', priceId);
     } else {
-        params.set('line_items[0][price_data][currency]', STRIPE_CURRENCY);
-        params.set('line_items[0][price_data][unit_amount]', STRIPE_REPORT_AMOUNT);
+        params.set('line_items[0][price_data][currency]', currency);
+        params.set('line_items[0][price_data][unit_amount]', String(REPORT_AMOUNT));
+        params.set('line_items[0][price_data][tax_behavior]', taxBehaviorFor(currency));
         params.set('line_items[0][price_data][product_data][name]', 'Digital Wellbeing Full Report');
         params.set('line_items[0][price_data][product_data][description]', `Full report for ${archetypeLabel}`);
     }
