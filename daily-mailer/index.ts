@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
         const specificAdvice = content[`advice_day_${targetStage}`] || content.advice_day_5;
 
         const emailParams = new EmailParams()
-          .setFrom(new Sender("founder@opendemocracy.nz", "Your Name"))
+          .setFrom(new Sender("founder@opendemocracy.nz", "Rakesh Lal"))
           .setTo([new Recipient(user.email, user.first_name)])
           .setTemplateId(TEMPLATE_IDS[targetStage])
           .setPersonalization([

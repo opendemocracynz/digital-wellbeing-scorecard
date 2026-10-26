@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /payment.html
+Disallow: /payment.html?
+
+Sitemap: https://digitalwellbeingscore.app/sitemap.xml
