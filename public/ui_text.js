@@ -29,7 +29,7 @@ const uiText = {
         "copy_button": "Click to Copy",
         "copied_button": "Copied!",
         "share_via": "Share via email or social media",
-        "unlock_report_button": "🔓 Unlock Full Report <span class='text-sm opacity-80 ml-1'>($5)</span>",
+        "unlock_report_button": "🔓 Unlock Full Report",
         "viewing_profile_label": "Viewing Profile",
         "share_message_template": "I just scored {{score}}/75 on the Digital Wellbeing Scorecard and my archetype is {{archetype}}. Find out yours!",
         "unanswered_warning": "You have skipped {{count}} questions.<br/>Unanswered questions will be scored as zero (Zombie Mode). Do you want to proceed?<br/>Click OK to submit, or Cancel to go back to the missed questions.",
