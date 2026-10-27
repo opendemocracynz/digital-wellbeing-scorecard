@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const { buildPurchaseEmail } = require('./lib/purchase-email');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 // Service-role key: mark_report_purchased is not executable by the public anon key
@@ -22,6 +23,33 @@ function getEmailFromSession(session) {
 }
 
 const PURCHASE_EVENTS = ['checkout.session.completed', 'checkout.session.async_payment_succeeded'];
+
+const FROM_EMAIL = 'hello@digitalwellbeingscore.app';
+const FROM_NAME = 'Digital Wellbeing Score';
+
+async function sendPurchaseEmail({ email, level, sessionId }) {
+    const { subject, html, text } = buildPurchaseEmail({ level, sessionId });
+
+    const response = await fetch('https://api.mailersend.com/v1/email', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.MAILERSEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+            from: { email: FROM_EMAIL, name: FROM_NAME },
+            to: [{ email }],
+            subject,
+            html,
+            text,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`MailerSend send failed (${response.status}): ${errorBody}`);
+    }
+}
 
 const SIGNATURE_TOLERANCE_SECONDS = 5 * 60;
 
@@ -131,6 +159,17 @@ exports.handler = async function (event) {
                 statusCode: 500,
                 body: JSON.stringify({ error: error.message }),
             };
+        }
+
+        // Best-effort: the purchase is already recorded, so a failed email must not make
+        // Stripe retry the webhook (which would just re-run the flag update).
+        const level = Number(session.metadata?.level);
+        if (process.env.MAILERSEND_API_KEY && Number.isInteger(level) && level >= 1 && level <= 5) {
+            try {
+                await sendPurchaseEmail({ email, level, sessionId: session.id });
+            } catch (emailError) {
+                console.error('Failed to send purchase email:', emailError);
+            }
         }
     }
 
