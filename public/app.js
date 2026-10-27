@@ -294,7 +294,15 @@ function nextQuestion() {
     } else {
         // Check for unanswered questions (scored as 0)
         const unansweredCount = quizState.answers.filter(score => score === 0).length;
-        
+
+        // A quiz with nothing answered has no result to show, so send them back to the start.
+        if (unansweredCount === quizData.length) {
+            alert(uiText.results.no_answers_warning);
+            quizState.currentQuestionIndex = 0;
+            renderQuestion();
+            return;
+        }
+
         if (unansweredCount > 0) {
             const proceed = confirm(uiText.results.unanswered_warning.replace('{{count}}', unansweredCount));
             if (!proceed) {
@@ -328,7 +336,7 @@ function prevQuestion() {
 }
 
 function getArchetype(score) {
-    if (score >= 15 && score <= 29) return { level: 1, name: 'Zombie Clickslave' };
+    if (score >= 1 && score <= 29) return { level: 1, name: 'Zombie Clickslave' };
     if (score >= 30 && score <= 44) return { level: 2, name: 'Unconscious Doomscroller' };
     if (score >= 45 && score <= 55) return { level: 3, name: 'Digital Drifter' };
     if (score >= 56 && score <= 68) return { level: 4, name: 'Intentional Architect' };

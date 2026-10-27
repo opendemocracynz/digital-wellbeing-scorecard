@@ -32,6 +32,7 @@ const uiText = {
         "unlock_report_button": "🔓 Unlock Full Report",
         "viewing_profile_label": "Viewing Profile",
         "share_message_template": "I just scored {{score}}/75 on the Digital Wellbeing Scorecard and my archetype is {{archetype}}. Find out yours!",
+        "no_answers_warning": "Please answer at least one question to see your result.",
         "unanswered_warning": "You have skipped {{count}} questions.<br/>Unanswered questions will be scored as zero (Zombie Mode). Do you want to proceed?<br/>Click OK to submit, or Cancel to go back to the missed questions.",
         "subscription": {
             "welcome_back_improved": "Welcome back! You improved by {{score_diff}} points! 🚀",

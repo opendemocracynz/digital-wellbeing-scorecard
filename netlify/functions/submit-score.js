@@ -48,8 +48,11 @@ function getPillarScores(answers) {
     return scores;
 }
 
+// Skipped questions score 0 ("Zombie Mode"), so a heavily-skipped quiz can total under 15.
+// Anything from 1 up counts as the lowest archetype rather than "Unknown", which would
+// leave the results page without an archetype or a report offer.
 function getArchetype(score) {
-    if (score >= 15 && score <= 29) return { level: 1, name: 'Zombie Clickslave' };
+    if (score >= 1 && score <= 29) return { level: 1, name: 'Zombie Clickslave' };
     if (score >= 30 && score <= 44) return { level: 2, name: 'Unconscious Doomscroller' };
     if (score >= 45 && score <= 55) return { level: 3, name: 'Digital Drifter' };
     if (score >= 56 && score <= 68) return { level: 4, name: 'Intentional Architect' };
@@ -62,8 +65,27 @@ exports.handler = async function(event, context) {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
+    let answers;
     try {
-        const { answers } = JSON.parse(event.body);
+        ({ answers } = JSON.parse(event.body));
+    } catch (error) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request.' }) };
+    }
+
+    // 0 = skipped, 1-5 = answered. Must be one entry per question.
+    const isValid = Array.isArray(answers)
+        && answers.length === questionCategories.length
+        && answers.every((score) => Number.isInteger(score) && score >= 0 && score <= 5);
+
+    if (!isValid) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'Invalid answers.' }) };
+    }
+
+    if (answers.every((score) => score === 0)) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'Please answer at least one question.' }) };
+    }
+
+    try {
         const totalScore = answers.reduce((acc, score) => acc + score, 0);
         const archetype = getArchetype(totalScore);
         const pillarScores = getPillarScores(answers);
