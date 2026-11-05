@@ -94,7 +94,7 @@ function recapBlock(archetype, score) {
 // ever ships with a broken image. (PREVIEW_PHOTOS=1 swaps in labelled placeholders for the preview.)
 const FOUNDER_PHOTOS = {
     dark: null,   // e.g. '/images/founder-dark.jpg'   (display 280px wide, file 560x560)
-    happy: null,  // e.g. '/images/founder-happy.jpg'  (display 88px, file 264x264)
+    happy: '/images/founder-happy.jpg',  // e.g. '/images/founder-happy.jpg'  (display 88px, file 264x264)
 };
 
 function placeholder(label, w, h, bg, fg) {
