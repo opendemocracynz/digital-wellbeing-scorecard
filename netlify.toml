@@ -28,5 +28,11 @@
   to = "/terms.html"
   status = 200
 
+# Unlisted explainer, linked only from emails.
+[[redirects]]
+  from = "/how-it-works"
+  to = "/how-it-works.html"
+  status = 200
+
 [dev]
   publish = "public"

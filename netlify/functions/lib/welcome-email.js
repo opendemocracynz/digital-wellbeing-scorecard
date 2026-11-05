@@ -2,54 +2,10 @@
 
 const { ARCHETYPES } = require('./archetypes');
 const { unsubscribeUrl: buildUnsubscribeUrl } = require('./retake');
+const { PILLAR_RANGES, getWeakestPillar } = require('./pillars');
+const { links } = require('./email-links');
 
 const SITE_URL = 'https://digitalwellbeingscore.app';
-
-// Each pillar rolls up a different number of questions, so raw scores aren't directly
-// comparable across pillars — a pillar built from 2 questions (range 2-10) will almost
-// always look "lower" than one built from 6 questions (range 6-30) even if the user is
-// relatively stronger there. Weakest pillar is picked by normalized percentage instead.
-const PILLAR_RANGES = {
-    Physiological: { min: 2, max: 10, label: 'Physiological', weakness: 'Digital Fatigue' },
-    Psychological: { min: 6, max: 30, label: 'Psychological', weakness: 'Mental Overload' },
-    Social: { min: 2, max: 10, label: 'Social', weakness: 'Connection Gap' },
-    Cognitive: { min: 5, max: 25, label: 'Cognitive', weakness: 'Information Haze' },
-};
-
-const WEAKNESS_COPY = {
-    Physiological: {
-        whatThisMeans: 'Your habits here are compromising your physical rest and energy.',
-        risk: 'Chronic fatigue, disrupted sleep, and a body that never fully switches off.',
-    },
-    Psychological: {
-        whatThisMeans: 'Your habits here are compromising your mental clarity and emotional regulation.',
-        risk: 'Heightened anxiety, decision fatigue, and burnout.',
-    },
-    Social: {
-        whatThisMeans: 'Your habits here are compromising your real-world relationships and presence.',
-        risk: 'Shallow connections, isolation, and weakened relationships with the people who matter.',
-    },
-    Cognitive: {
-        whatThisMeans: 'Your habits here are compromising your focus and ability to think deeply.',
-        risk: 'Shortened attention span, difficulty concentrating, and less capacity for meaningful work.',
-    },
-};
-
-function getWeakestPillar(pillarScores) {
-    let weakestKey = null;
-    let weakestPercent = Infinity;
-
-    for (const key of Object.keys(PILLAR_RANGES)) {
-        const { min, max } = PILLAR_RANGES[key];
-        const percent = ((pillarScores[key] - min) / (max - min)) * 100;
-        if (percent < weakestPercent) {
-            weakestPercent = percent;
-            weakestKey = key;
-        }
-    }
-
-    return { key: weakestKey, ...PILLAR_RANGES[weakestKey], ...WEAKNESS_COPY[weakestKey] };
-}
 
 function pillarBarRow(key, score) {
     const { min, max, label } = PILLAR_RANGES[key];
@@ -73,8 +29,8 @@ function buildWelcomeEmail({ totalScore, archetypeLevel, pillarScores, email, re
     const archetype = ARCHETYPES[archetypeLevel] || ARCHETYPES[3];
     const weakest = getWeakestPillar(pillarScores);
     const archetypeImageUrl = `${SITE_URL}${archetype.img}`;
-    const reportUrl = `${SITE_URL}/payment.html?level=${archetypeLevel}`;
-    const unsubscribeUrl = buildUnsubscribeUrl({ email, token: retakeToken });
+    const reportUrl = links.report(archetypeLevel, 'welcome', 'report_button');
+    const unsubscribeUrl = buildUnsubscribeUrl({ token: retakeToken });
 
     const subject = `Your Digital Wellbeing Score: ${archetype.name}`;
 
@@ -85,6 +41,7 @@ function buildWelcomeEmail({ totalScore, archetypeLevel, pillarScores, email, re
     const html = `<!DOCTYPE html>
 <html>
 <body style="margin:0; padding:0; background-color:#0f172a; font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#0f172a; font-size:1px; line-height:1px;">You scored ${totalScore} / 75. Here's your four-pillar breakdown and your biggest opportunity.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f172a; padding: 24px 0;">
 <tr><td align="center">
 <table role="presentation" width="100%" style="max-width: 560px;" cellpadding="0" cellspacing="0">
@@ -127,14 +84,15 @@ function buildWelcomeEmail({ totalScore, archetypeLevel, pillarScores, email, re
         </p>
 
         <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            We've identified specific protocols to lift your ${weakest.label} score. If you're serious about improving your digital habits, your targeted action plan is ready.
+            Knowing your score is the first step. Your ${archetype.name} report goes deeper: what the research shows, how the four pillars fit together, and a 7-day challenge to start lifting your ${weakest.label} score.
         </p>
 
-        <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 20px 0 8px;">
             <tr><td style="background-color:#eab308; border-radius: 8px;">
-                <a href="${reportUrl}" style="display:inline-block; padding: 14px 28px; font-size: 14px; font-weight: bold; color:#1e293b; text-decoration:none; text-transform: uppercase; letter-spacing: 1px;">Unlock Your Targeted Action Plan</a>
+                <a href="${reportUrl}" style="display:inline-block; padding: 14px 28px; font-size: 14px; font-weight: bold; color:#1e293b; text-decoration:none; text-transform: uppercase; letter-spacing: 1px;">Get Your 7-Day Plan</a>
             </td></tr>
         </table>
+        <p style="font-size: 12px; color:#94a3b8; margin: 0 0 8px;">One-time purchase, not a subscription. 14-day refund if it isn't useful.</p>
 
         <p style="font-size: 14px; color:#cbd5e1; margin-top: 24px;">Good luck!<br>Rakesh Pinao</p>
         <p style="font-size: 12px; color:#94a3b8; line-height: 1.6;">Rakesh is the creator of DigitalWellbeingScore.app and a previous digital Zombie Clickslave. In our next email, find out about his journey toward greater digital agency and improved personal wellbeing.</p>
@@ -171,7 +129,9 @@ The risk: Left unchecked, this typically leads to ${weakest.risk.toLowerCase()}
 
 We'll send a reminder in 1 and 3 months to suggest a retake.
 
-Unlock your targeted action plan: ${reportUrl}
+Your ${archetype.name} report goes deeper: what the research shows, how the four pillars fit together, and a 7-day challenge to start lifting your ${weakest.label} score.
+Get your 7-day plan: ${reportUrl}
+(One-time purchase, not a subscription. 14-day refund if it isn't useful.)
 
 Good luck!
 Rakesh Pinao

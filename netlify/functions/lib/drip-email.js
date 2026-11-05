@@ -1,17 +1,22 @@
 // netlify/functions/lib/drip-email.js
 //
-// Builds the Day 3 / 10 / 30 / 90 follow-up emails. Day 3 and 10 carry the founder
-// narrative; the remaining stages are progress check-ins and a free poster offer.
+// Builds the Day 3 / 10 / 30 / 90 follow-up emails. Each email has one job:
+//   Day 3   story + a free quick win for their weakest pillar (builds trust, shows the value)
+//   Day 10  story + the full report (the structured next step)
+//   Day 30  retake (reinforce: show the direction of travel) + report for non-buyers
+//   Day 90  retake + poster thank-you + report for non-buyers
+// Day 10/30/90 tease the "how it works" page, which is reached only from these emails.
 
 const { ARCHETYPES } = require('./archetypes');
-const { retakeUrl, unsubscribeUrl: buildUnsubscribeUrl } = require('./retake');
+const { unsubscribeUrl: buildUnsubscribeUrl } = require('./retake');
+const { getWeakestPillar } = require('./pillars');
+const { links, SITE_URL } = require('./email-links');
 
-const SITE_URL = 'https://digitalwellbeingscore.app';
-
-function wrapEmail({ bodyHtml, unsubscribeUrl }) {
+function wrapEmail({ bodyHtml, unsubscribeUrl, preheader }) {
     return `<!DOCTYPE html>
 <html>
 <body style="margin:0; padding:0; background-color:#0f172a; font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#0f172a; font-size:1px; line-height:1px;">${preheader || ''}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f172a; padding: 24px 0;">
 <tr><td align="center">
 <table role="presentation" width="100%" style="max-width: 560px;" cellpadding="0" cellspacing="0">
@@ -34,14 +39,40 @@ function wrapEmail({ bodyHtml, unsubscribeUrl }) {
 </html>`;
 }
 
-// The link carries the lead's retake token, so the site opens in retake mode (shows their
-// last score, skips the email step) instead of a cold start.
-function retakeButton(label, lead) {
+const P = 'font-size: 14px; line-height: 1.6; color:#cbd5e1;';
+
+function para(text, extra = '') {
+    return `<p style="${P} ${extra}">${text}</p>`;
+}
+
+// kind 'report' = yellow (buy), 'retake' = blue (come back)
+function button(label, href, kind = 'retake') {
+    const bg = kind === 'report' ? '#eab308' : '#3b82f6';
+    const fg = kind === 'report' ? '#1e293b' : '#ffffff';
     return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
-        <tr><td style="background-color:#3b82f6; border-radius: 8px;">
-            <a href="${retakeUrl(lead && lead.retake_token)}" style="display:inline-block; padding: 14px 28px; font-size: 14px; font-weight: bold; color:#fff; text-decoration:none; text-transform: uppercase; letter-spacing: 1px;">${label}</a>
+        <tr><td style="background-color:${bg}; border-radius: 8px;">
+            <a href="${href}" style="display:inline-block; padding: 14px 28px; font-size: 14px; font-weight: bold; color:${fg}; text-decoration:none; text-transform: uppercase; letter-spacing: 1px;">${label}</a>
         </td></tr>
     </table>`;
+}
+
+function panel(titleHtml, innerHtml, titleColor = '#eab308') {
+    return `<div style="background-color:#0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <p style="font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color:${titleColor}; margin: 0 0 6px; font-weight: bold;">${titleHtml}</p>
+        ${innerHtml}
+    </div>`;
+}
+
+// The teaser for the (unlisted) explainer page. It carries the same token so the page can
+// show this reader's own result.
+function howItWorksTease(lead, campaign) {
+    return `<div style="border-top: 1px solid #334155; margin-top: 24px; padding-top: 16px;">
+        <p style="font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color:#94a3b8; margin: 0 0 6px; font-weight: bold;">How the Digital Wellbeing Score works</p>
+        <p style="font-size: 13px; line-height: 1.5; color:#cbd5e1; margin: 0 0 8px;">
+            We've designed the scorecard to help anyone, whether they're completely unaware of how modern life affects their wellbeing, or already looking for practical ways to forge improvements.
+            <a href="${links.howItWorks(lead.retake_token, campaign, 'how_it_works')}" style="color:#60a5fa; font-weight: bold;">Read more about how it works &rarr;</a>
+        </p>
+    </div>`;
 }
 
 function recapBlock(archetype, score) {
@@ -58,97 +89,136 @@ function recapBlock(archetype, score) {
     </table>`;
 }
 
-function buildStory1(lead) {
-    const subject = "I was a Zombie Clickslave too";
-    const body = `
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            I had high expectations of myself and big dreams for what I could achieve, so I was always giving it 110%. I told myself I was getting ahead: clearing a few extra emails from my phone after dinner, or doing a little more research before bed.
-        </p>
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            At first I barely noticed the change. Then I reached burnout, and the phone stopped being a tool for work. I started doomscrolling to avoid work instead. Midnight became 2am. I was not sleeping, but I was not really working either. Even when I put the phone down, my mind kept circling the same thoughts.
-        </p>
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            I became angry and moody, and took it out on the people I cared about most. Slowly, and later than I wish I had, I realised I was trapped in endless information and using my screen to avoid the real world. I had lost countless hours of sleep, quality time, and productive time I would never get back. I felt trapped and alone, and I knew I needed to change, even though I did not yet know how.
-        </p>
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            For now, notice one moment when you reach for your phone to avoid something else. Naming the habit is where my journey began.
-        </p>
-        ${retakeButton('Revisit the Scorecard', lead)}
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1; font-style: italic;">Next time: what actually changed.</p>
-    `;
-    return { subject, body };
+function weakestFor(pillarScores) {
+    try {
+        return pillarScores ? getWeakestPillar(pillarScores) : null;
+    } catch (e) {
+        return null;
+    }
 }
 
-function buildStory2(lead) {
-    const subject = "What actually changed";
+function levelOf(lead) {
+    return ARCHETYPES[lead.archetype_segment] ? lead.archetype_segment : 3;
+}
+
+function buildStory1(lead, pillarScores) {
+    const campaign = 'drip_d3';
+    const weakest = weakestFor(pillarScores);
+    const level = levelOf(lead);
+    const subject = "I was a Zombie Clickslave too";
+    const preheader = 'The moment I realised my phone was running my day, and one small thing you can try tonight.';
+
+    const quickWin = weakest
+        ? panel(`One quick win for your ${weakest.label} pillar`, `<p style="font-size: 13px; line-height: 1.5; color:#cbd5e1; margin: 0;">${weakest.quickWin}</p>`, '#60a5fa')
+        : '';
+
+    const reportLine = para(
+        `If you'd like a structured way to work on it, your ${ARCHETYPES[level].name} report has a 7-day challenge to help you work on it.
+         <a href="${links.report(level, campaign, 'report_link')}" style="color:#60a5fa; font-weight: bold;">See what's in it &rarr;</a>`
+    );
+
     const body = `
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            I did not go cold turkey at first. I thought I could beat the habit by simply putting my phone away, but every phone call or alarm put it back in my hand, and my usage crept up again. I could never stay away long enough for that approach to change anything.
-        </p>
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            What helped was making the boundary harder to negotiate. I set strict time limits, turned the phone off, and disabled alarms when I needed real rest. I also asked my family for help. I gave my wife and kids permission to interrupt me, demand my attention, and call me back when I disappeared into the screen. They had tried before, but I had quietly pushed them away. This time I let them draw me back into myself. It felt good to feel present, loved, and wanted again.
-        </p>
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            Eventually, going cold turkey helped too, but it was not permanent. The freedom I felt outdoors and playing with my family helped me put the old habits in context. Today I still use technology every day for work and to stay in touch, but it serves me and I am more often in control. The breaks matter, but the habits I use while I am online are what keep things in check.
-        </p>
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">Your result points to a starting place, not a verdict. Try one boundary that protects the area you most want to change, then give it time to become familiar.</p>
-        ${retakeButton('Retake the Scorecard', lead)}
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">We'll check in again in a month, and again in three, so you can see what has actually shifted.</p>
+        ${para('I had high expectations of myself and big dreams for what I could achieve, so I was always giving it 110%. I told myself I was getting ahead: clearing a few extra emails from my phone after dinner, or doing a little more research before bed.')}
+        ${para('At first I barely noticed the change. Then I reached burnout, and the phone stopped being a tool for work. I started doomscrolling to avoid work instead. Midnight became 2am. I was not sleeping, but I was not really working either. Even when I put the phone down, my mind kept circling the same thoughts.')}
+        ${para('I became angry and moody, and took it out on the people I cared about most. Slowly, and later than I wish I had, I realised I was trapped in endless information and using my screen to avoid the real world. I had lost countless hours of sleep, quality time, and productive time I would never get back. I felt trapped and alone, and I knew I needed to change, even though I did not yet know how.')}
+        ${para('For now, notice one moment when you reach for your phone to avoid something else. Naming the habit is where my journey began.')}
+        ${quickWin}
+        ${reportLine}
+        ${para('Next time: what actually changed.', 'font-style: italic;')}
     `;
-    return { subject, body };
+    return { subject, preheader, body };
+}
+
+function buildStory2(lead, pillarScores) {
+    const campaign = 'drip_d10';
+    const level = levelOf(lead);
+    const archetype = ARCHETYPES[level];
+    const weakest = weakestFor(pillarScores);
+    const subject = "What actually changed (and what didn't)";
+    const preheader = 'Why willpower was never going to work, and what did.';
+
+    const focus = weakest ? ` focused on your ${weakest.label.toLowerCase()} habits` : '';
+    const body = `
+        ${para('I did not go cold turkey at first. I thought I could beat the habit by simply putting my phone away, but every phone call or alarm put it back in my hand, and my usage crept up again. I could never stay away long enough for that approach to change anything.')}
+        ${para('What helped was making the boundary harder to negotiate. I set strict time limits, turned the phone off, and disabled alarms when I needed real rest. I also asked my family for help. I gave my wife and kids permission to interrupt me, demand my attention, and call me back when I disappeared into the screen. They had tried before, but I had quietly pushed them away. This time I let them draw me back into myself. It felt good to feel present, loved, and wanted again.')}
+        ${para('Eventually, going cold turkey helped too, but it was not permanent. The freedom I felt outdoors and playing with my family helped me put the old habits in context. Today I still use technology every day for work and to stay in touch, but it serves me and I am more often in control. The breaks matter, but the habits I use while I am online are what keep things in check.')}
+        ${para('Your result points to a starting place, not a verdict. Try one boundary that protects the area you most want to change, then give it time to become familiar.')}
+        ${para(`If you want help turning that into a plan, the full ${archetype.name} report gives you a 7-day challenge${focus}, one step at a time.`)}
+        ${button('See your 7-day plan', links.report(level, campaign, 'report_button'), 'report')}
+        ${para("It's a one-time purchase, not a subscription, and there's a 14-day refund if it isn't useful.", 'font-size: 12px; color:#94a3b8;')}
+        ${para("We'll check in again in a month, and again in three, so you can see what has actually shifted.")}
+        ${howItWorksTease(lead, campaign)}
+    `;
+    return { subject, preheader, body };
 }
 
 function buildDay30(lead) {
-    const archetype = ARCHETYPES[lead.archetype_segment] || ARCHETYPES[3];
-    const subject = "It's been a month — how are you doing?";
+    const campaign = 'drip_d30';
+    const level = levelOf(lead);
+    const archetype = ARCHETYPES[level];
+    const subject = 'A month on: has your score moved?';
+    const preheader = `You scored ${lead.current_score} / 75. Retaking takes about three minutes.`;
+
     const body = `
         ${recapBlock(archetype, lead.current_score)}
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            It's been a month since you completed the Digital Wellbeing Score. Habits shift fast — for better or worse — so this is a
-            good moment to check in with yourself, not just with us.
-        </p>
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            Retake the scorecard to see whether your ${archetype.name.toLowerCase()} habits have moved, and get an updated
-            4-pillar breakdown.
-        </p>
-        ${retakeButton('Retake the Scorecard', lead)}
+        ${para("It's been a month since you completed the Digital Wellbeing Score. A score is a snapshot. What tells you something is the direction it moves, and a month is long enough for small changes to show.")}
+        ${para(`Retake the scorecard to see whether your ${archetype.name.toLowerCase()} habits have shifted, and get an updated 4-pillar breakdown. It takes about three minutes, and we'll show you the difference from last time.`)}
+        ${button('Retake the Scorecard', links.retake(lead.retake_token, campaign, 'retake_button'))}
+        ${lead.has_purchased_report ? '' : para(`Still wondering where to start? The ${archetype.name} report turns your result into a 7-day challenge. <a href="${links.report(level, campaign, 'report_link')}" style="color:#60a5fa; font-weight: bold;">See what's in it &rarr;</a>`)}
+        ${howItWorksTease(lead, campaign)}
     `;
-    return { subject, body };
+    return { subject, preheader, body };
 }
 
 function buildDay90(lead) {
-    const archetype = ARCHETYPES[lead.archetype_segment] || ARCHETYPES[3];
-    const subject = "3 months in — plus a gift for you";
-    const posterUrl = `${SITE_URL}/.netlify/functions/download-poster`;
+    const campaign = 'drip_d90';
+    const level = levelOf(lead);
+    const archetype = ARCHETYPES[level];
+    const subject = 'Three months on, and a small thank-you';
+    const preheader = 'See where you stand now, plus a printable poster on us.';
+
     const body = `
         ${recapBlock(archetype, lead.current_score)}
-        <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
-            It's been three months since your Digital Wellbeing Score. Whatever's changed since — or hasn't — it's worth
-            seeing where you stand now.
-        </p>
-        ${retakeButton('Retake the Scorecard', lead)}
-        <div style="background-color:#0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-top: 20px;">
-            <p style="font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color:#eab308; margin: 0 0 6px; font-weight: bold;">A small thank-you</p>
-            <p style="font-size: 13px; line-height: 1.5; color:#cbd5e1; margin: 0 0 10px;">
-                Here's a printable Digital Wellbeing poster for your wall or desk — a reminder of the four pillars, on us.
-            </p>
-            <a href="${posterUrl}" style="color:#60a5fa; font-size: 13px; font-weight: bold;">Download your poster &rarr;</a>
-        </div>
+        ${para("It's been three months since your Digital Wellbeing Score. Whatever has changed since, or hasn't, it's worth seeing where you stand now. Seeing the movement is often what keeps a new habit going.")}
+        ${button('Retake the Scorecard', links.retake(lead.retake_token, campaign, 'retake_button'))}
+        ${panel('A small thank-you', `<p style="font-size: 13px; line-height: 1.5; color:#cbd5e1; margin: 0 0 10px;">Here's a printable Digital Wellbeing poster for your wall or desk, a reminder of the four pillars, on us.</p>
+            <a href="${links.poster(campaign, 'poster')}" style="color:#60a5fa; font-size: 13px; font-weight: bold;">Download your poster &rarr;</a>`)}
+        ${lead.has_purchased_report ? '' : para(`If a retake shows you're stuck, the ${archetype.name} report gives you a 7-day challenge to get moving. <a href="${links.report(level, campaign, 'report_link')}" style="color:#60a5fa; font-weight: bold;">See what's in it &rarr;</a>`)}
+        ${howItWorksTease(lead, campaign)}
     `;
-    return { subject, body };
+    return { subject, preheader, body };
 }
 
 const STAGE_BUILDERS = { 3: buildStory1, 10: buildStory2, 30: buildDay30, 90: buildDay90 };
 
-function buildDripEmail({ stage, lead }) {
+// Plain-text alternative generated from the same body, so the two never drift apart.
+function htmlToText(html) {
+    return html
+        .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g, (m, href, label) => `${label.replace(/<[^>]+>/g, '').trim()} (${href})`)
+        .replace(/<\/(p|div|tr|table)>/g, '\n\n')
+        .replace(/<br\s*\/?>/g, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&rarr;/g, '->')
+        .replace(/&mdash;/g, '-')
+        .replace(/&middot;/g, '-')
+        .replace(/&amp;/g, '&')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+}
+
+function buildDripEmail({ stage, lead, pillarScores = null }) {
     const builder = STAGE_BUILDERS[stage];
     if (!builder) throw new Error(`No email content defined for drip stage ${stage}`);
 
-    const unsubscribeUrl = buildUnsubscribeUrl({ email: lead.email, token: lead.retake_token });
-    const { subject, body } = builder(lead);
-    const html = wrapEmail({ bodyHtml: body, unsubscribeUrl });
+    const unsubscribeUrl = buildUnsubscribeUrl({ token: lead.retake_token });
+    const { subject, preheader, body } = builder(lead, pillarScores);
+    const html = wrapEmail({ bodyHtml: body, unsubscribeUrl, preheader });
 
-    return { subject, html, text: `${subject}\n\nView this email in an HTML-capable client. Unsubscribe: ${unsubscribeUrl}` };
+    const text = `${htmlToText(body)}\n\n--\nDigital Wellbeing Score - digitalwellbeingscore.app\n(c) 2026 Open Democracy NZ\nUnsubscribe: ${unsubscribeUrl}`;
+    return { subject, html, text };
 }
 
 module.exports = { buildDripEmail };

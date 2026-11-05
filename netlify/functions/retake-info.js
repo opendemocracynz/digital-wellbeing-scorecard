@@ -26,7 +26,7 @@ exports.handler = async function (event) {
     try {
         const { data, error } = await supabaseAdmin
             .from('marketing_leads')
-            .select('email, first_name, archetype_segment, current_score')
+            .select('email, first_name, archetype_segment, current_score, has_purchased_report')
             .eq('retake_token', token)
             .maybeSingle();
 
@@ -41,6 +41,7 @@ exports.handler = async function (event) {
                 firstName: data.first_name,
                 previousLevel: data.archetype_segment,
                 previousScore: data.current_score,
+                hasPurchased: data.has_purchased_report === true,
             }),
         };
     } catch (error) {

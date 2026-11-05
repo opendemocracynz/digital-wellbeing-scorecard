@@ -12,6 +12,7 @@
 const { schedule } = require('@netlify/functions');
 const { supabaseAdmin } = require('./lib/report-storage');
 const { buildDripEmail } = require('./lib/drip-email');
+const { pillarScoresFromResearch } = require('./lib/pillars');
 
 const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
 const FROM_EMAIL = 'hello@digitalwellbeingscore.app';
@@ -20,8 +21,25 @@ const FROM_NAME = 'Digital Wellbeing Score';
 const STAGES = [3, 10, 30, 90];
 const FINAL_STAGE = 90;
 
+// Their latest pillar scores live on the research row the lead points at. Personalisation is a
+// nice-to-have, so any failure here sends the email without it rather than not at all.
+async function getPillarScores(lead) {
+    if (!lead.last_research_id) return null;
+    try {
+        const { data } = await supabaseAdmin
+            .from('research_data')
+            .select('score_physiological, score_psychological, score_social, score_cognitive')
+            .eq('id', lead.last_research_id)
+            .maybeSingle();
+        return pillarScoresFromResearch(data);
+    } catch (error) {
+        return null;
+    }
+}
+
 async function sendDripEmail(lead, stage) {
-    const { subject, html, text } = buildDripEmail({ stage, lead });
+    const pillarScores = await getPillarScores(lead);
+    const { subject, html, text } = buildDripEmail({ stage, lead, pillarScores });
 
     const response = await fetch('https://api.mailersend.com/v1/email', {
         method: 'POST',
@@ -55,7 +73,7 @@ function determineTargetStage(lead, daysSince) {
 }
 
 async function runDrip() {
-    const baseColumns = 'email, archetype_segment, current_score, last_email_stage, quiz_completed_at, has_purchased_report, unsubscribed_from_sequences';
+    const baseColumns = 'email, last_research_id, archetype_segment, current_score, last_email_stage, quiz_completed_at, has_purchased_report, unsubscribed_from_sequences';
     const fetchLeads = (columns) => supabaseAdmin
         .from('marketing_leads')
         .select(columns)
