@@ -56,6 +56,8 @@ async function sendPurchaseEmail({ email, level, sessionId }) {
         const errorBody = await response.text();
         throw new Error(`MailerSend send failed (${response.status}): ${errorBody}`);
     }
+
+    return response.headers?.get?.('x-message-id') || null;
 }
 
 const SIGNATURE_TOLERANCE_SECONDS = 5 * 60;
@@ -171,14 +173,29 @@ exports.handler = async function (event) {
 
         // Best-effort: the purchase is already recorded, so a failed email must not make
         // Stripe retry the webhook (which would just re-run the flag update).
+        // The outcome goes in the response body as well as the log: Stripe shows it on the
+        // event delivery, which is the easiest place to see why an email didn't arrive.
+        let emailStatus = 'skipped';
         const level = Number(session.metadata?.level);
-        if (process.env.MAILERSEND_API_KEY && Number.isInteger(level) && level >= 1 && level <= 5) {
+        if (!process.env.MAILERSEND_API_KEY) {
+            emailStatus = 'skipped: MAILERSEND_API_KEY missing';
+        } else if (Number.isInteger(level) && level >= 1 && level <= 5) {
             try {
-                await sendPurchaseEmail({ email: payerEmail || leadEmail, level, sessionId: session.id });
+                const messageId = await sendPurchaseEmail({ email: payerEmail || leadEmail, level, sessionId: session.id });
+                emailStatus = `sent (message id: ${messageId || 'none returned'})`;
             } catch (emailError) {
                 console.error('Failed to send purchase email:', emailError);
+                emailStatus = `failed: ${String(emailError.message).slice(0, 300)}`;
             }
+        } else {
+            emailStatus = `skipped: invalid level ${session.metadata?.level}`;
         }
+        console.log(`Purchase processed for lead ${leadEmail}; email ${emailStatus}`);
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({ received: true, email: emailStatus }),
+        };
     }
 
     return {

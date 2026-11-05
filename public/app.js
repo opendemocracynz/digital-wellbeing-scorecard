@@ -541,16 +541,27 @@ function updateProfileCard(level, userScore, isUserResult, focusArea = null) {
     if (secondaryCtas && !document.getElementById('payment-btn')) {
         const btn = document.createElement('a');
         btn.id = 'payment-btn';
-        const leadEmail = localStorage.getItem(LEAD_EMAIL_STORAGE_KEY);
-        btn.href = `payment.html?level=${level}${leadEmail ? `&email=${encodeURIComponent(leadEmail)}` : ''}`;
+        btn.dataset.level = level;
+        btn.href = buildPaymentUrl(level);
         btn.className = 'block w-full text-center bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg mt-6 transition-all transform hover:scale-105 uppercase tracking-widest border border-yellow-400';
         btn.innerHTML = uiText.results.unlock_report_button;
-        btn.addEventListener('click', () => track('report_cta_clicked', { archetype_level: level }));
+        btn.addEventListener('click', () => {
+            btn.href = buildPaymentUrl(level);
+            track('report_cta_clicked', { archetype_level: level });
+        });
         secondaryCtas.appendChild(btn);
     }
 
     // If viewing a different level, show a "Back to my result" hint? 
     // For MVP, we just let them explore.
+}
+
+// Read the saved lead email when the link is used, not when the button is built: the button
+// is created as soon as results render, before this visit's signup has stored its email,
+// so building the URL up front would send a previous signup's address to checkout.
+function buildPaymentUrl(level) {
+    const leadEmail = localStorage.getItem(LEAD_EMAIL_STORAGE_KEY);
+    return `payment.html?level=${level}${leadEmail ? `&email=${encodeURIComponent(leadEmail)}` : ''}`;
 }
 
 function addShareButtons(archetype, score) {
@@ -636,6 +647,8 @@ async function handleSubscription(event) {
             // so payment.html can pre-fill the Stripe Checkout email and guarantee
             // it matches the marketing_leads row the webhook needs to update.
             localStorage.setItem(LEAD_EMAIL_STORAGE_KEY, email);
+            const paymentBtn = document.getElementById('payment-btn');
+            if (paymentBtn) paymentBtn.href = buildPaymentUrl(paymentBtn.dataset.level);
             emailInput.value = '';
 
             // Clear the saved quiz state
