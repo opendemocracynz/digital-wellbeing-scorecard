@@ -13,13 +13,20 @@ function getHeader(headers, name) {
     return key ? headers[key] : undefined;
 }
 
-function getEmailFromSession(session) {
-    // Prefer the email Stripe actually collected; metadata is only what the browser
-    // told create-checkout-session, so it's a last resort.
-    const customerDetailsEmail = session?.customer_details?.email;
-    const customerEmail = session?.customer_email;
-    const metadataEmail = session?.metadata?.email;
-    return (customerDetailsEmail || customerEmail || metadataEmail || '').trim().toLowerCase();
+function clean(value) {
+    return (value || '').trim().toLowerCase();
+}
+
+// The address the buyer paid with (Stripe-collected). Used for the receipt email.
+function getPayerEmail(session) {
+    return clean(session?.customer_details?.email || session?.customer_email || session?.metadata?.email);
+}
+
+// The address the buyer signed up with, which is what marketing_leads is keyed on. It can
+// legitimately differ from the payer's (e.g. Stripe Link autofills another address), so
+// match the lead on this and only fall back to the payer's address if it's missing.
+function getLeadEmail(session) {
+    return clean(session?.metadata?.email || session?.customer_email || session?.customer_details?.email);
 }
 
 const PURCHASE_EVENTS = ['checkout.session.completed', 'checkout.session.async_payment_succeeded'];
@@ -143,16 +150,17 @@ exports.handler = async function (event) {
             };
         }
 
-        const email = getEmailFromSession(session);
+        const leadEmail = getLeadEmail(session);
+        const payerEmail = getPayerEmail(session);
 
-        if (!email) {
+        if (!leadEmail) {
             return {
                 statusCode: 200,
                 body: JSON.stringify({ received: true, status: 'no_email' }),
             };
         }
 
-        const { error } = await supabase.rpc('mark_report_purchased', { p_email: email });
+        const { error } = await supabase.rpc('mark_report_purchased', { p_email: leadEmail });
 
         if (error) {
             return {
@@ -166,7 +174,7 @@ exports.handler = async function (event) {
         const level = Number(session.metadata?.level);
         if (process.env.MAILERSEND_API_KEY && Number.isInteger(level) && level >= 1 && level <= 5) {
             try {
-                await sendPurchaseEmail({ email, level, sessionId: session.id });
+                await sendPurchaseEmail({ email: payerEmail || leadEmail, level, sessionId: session.id });
             } catch (emailError) {
                 console.error('Failed to send purchase email:', emailError);
             }
