@@ -4,6 +4,10 @@ const uiText = {
         "subtitle": "Initialize system scan. Analyze your relationship with technology.",
         "assessment_button": "Begin Assessment",
         "resume_button": "Resume Assessment",
+        "retake_button": "Begin Retake",
+        "retake_welcome": "Welcome back{{name}}!",
+        "retake_summary": "Last time you scored <strong class='text-white'>{{score}} / 75</strong> ({{archetype}}). Retake the scorecard to see how your habits have moved.",
+        "retake_generic": "Retake the scorecard to see how your habits have moved since last time.",
         "clear_progress_button": "Clear Progress & Restart"
     },
     "quiz": {

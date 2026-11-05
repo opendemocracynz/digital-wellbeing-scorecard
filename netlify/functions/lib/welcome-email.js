@@ -1,6 +1,7 @@
 // netlify/functions/lib/welcome-email.js
 
 const { ARCHETYPES } = require('./archetypes');
+const { unsubscribeUrl: buildUnsubscribeUrl } = require('./retake');
 
 const SITE_URL = 'https://digitalwellbeingscore.app';
 
@@ -68,12 +69,12 @@ function pillarBarRow(key, score) {
         </tr>`;
 }
 
-function buildWelcomeEmail({ totalScore, archetypeLevel, pillarScores, email }) {
+function buildWelcomeEmail({ totalScore, archetypeLevel, pillarScores, email, retakeToken }) {
     const archetype = ARCHETYPES[archetypeLevel] || ARCHETYPES[3];
     const weakest = getWeakestPillar(pillarScores);
     const archetypeImageUrl = `${SITE_URL}${archetype.img}`;
     const reportUrl = `${SITE_URL}/payment.html?level=${archetypeLevel}`;
-    const unsubscribeUrl = `${SITE_URL}/.netlify/functions/unsubscribe?email=${encodeURIComponent(email)}`;
+    const unsubscribeUrl = buildUnsubscribeUrl({ email, token: retakeToken });
 
     const subject = `Your Digital Wellbeing Score: ${archetype.name}`;
 

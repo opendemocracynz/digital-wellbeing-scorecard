@@ -55,12 +55,22 @@ function determineTargetStage(lead, daysSince) {
 }
 
 async function runDrip() {
-    const { data: leads, error } = await supabaseAdmin
+    const baseColumns = 'email, archetype_segment, current_score, last_email_stage, quiz_completed_at, has_purchased_report, unsubscribed_from_sequences';
+    const fetchLeads = (columns) => supabaseAdmin
         .from('marketing_leads')
-        .select('email, archetype_segment, current_score, last_email_stage, quiz_completed_at, has_purchased_report, unsubscribed_from_sequences')
+        .select(columns)
         .eq('unsubscribed_from_sequences', false)
         .not('quiz_completed_at', 'is', null)
         .lt('last_email_stage', FINAL_STAGE);
+
+    let { data: leads, error } = await fetchLeads(`${baseColumns}, retake_token`);
+
+    // 42703 = undefined column: the retake_token migration hasn't been applied yet. Keep the
+    // drip running with email-based links rather than sending nothing.
+    if (error && error.code === '42703') {
+        console.warn('retake_token column missing; sending drip emails without retake links.');
+        ({ data: leads, error } = await fetchLeads(baseColumns));
+    }
 
     if (error) throw error;
     if (!leads || leads.length === 0) {

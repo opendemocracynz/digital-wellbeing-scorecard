@@ -16,7 +16,11 @@ if (measurementId) {
         window.dataLayer.push(arguments);
     };
     window.gtag('js', new Date());
-    window.gtag('config', measurementId, { anonymize_ip: true });
+    // The retake token (?r=) is a bearer secret for the visitor's lead record, so don't let
+    // GA record the full URL that contains it.
+    const pageUrl = new URL(window.location.href);
+    pageUrl.searchParams.delete('r');
+    window.gtag('config', measurementId, { anonymize_ip: true, page_location: pageUrl.toString() });
 }
 
 const campaign = captureCampaign();

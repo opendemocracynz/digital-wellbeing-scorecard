@@ -46,6 +46,104 @@ const categoryIcons = {
 const QUIZ_STORAGE_KEY = 'digitalWellbeingQuizState';
 const LEAD_EMAIL_STORAGE_KEY = 'digitalWellbeingLeadEmail';
 
+// RETAKE LINKS
+// Follow-up emails link to /?r=<token>. The server resolves the token to the lead, so the quiz
+// can start in "retake" mode: show their last score, skip the email step, and record the new
+// score against the same lead, so it builds on their history instead of looking like a cold start.
+const RETAKE_STORAGE_KEY = 'digitalWellbeingRetake';
+let retakeContext = null;
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+async function loadRetakeContext() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('r');
+
+    if (!token) {
+        // Same tab, page reloaded mid-retake: keep going in retake mode.
+        try { retakeContext = JSON.parse(sessionStorage.getItem(RETAKE_STORAGE_KEY)); } catch (error) { retakeContext = null; }
+        return;
+    }
+
+    // Take the token out of the address bar straight away (browser history, screenshots, referrers).
+    params.delete('r');
+    const query = params.toString();
+    history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+
+    try {
+        const response = await fetch(`/.netlify/functions/retake-info?t=${encodeURIComponent(token)}`);
+        if (!response.ok) return; // invalid or old link: behave like a normal visit
+
+        const info = await response.json();
+        retakeContext = {
+            email: info.email,
+            firstName: info.firstName,
+            previousScore: info.previousScore,
+            previousLevel: info.previousLevel,
+        };
+
+        try {
+            sessionStorage.setItem(RETAKE_STORAGE_KEY, JSON.stringify(retakeContext));
+            // payment.html pre-fills checkout from this, and it must match the lead's row.
+            localStorage.setItem(LEAD_EMAIL_STORAGE_KEY, info.email);
+            // A retake starts fresh, not from half-finished answers on this browser.
+            localStorage.removeItem(QUIZ_STORAGE_KEY);
+        } catch (error) { /* storage blocked: the retake still works for this page load */ }
+
+        track('retake_link_opened');
+    } catch (error) {
+        console.error('Could not load retake link:', error);
+    }
+}
+
+function retakeBannerHtml() {
+    if (!retakeContext) return '';
+
+    const name = retakeContext.firstName ? `, ${escapeHtml(retakeContext.firstName)}` : '';
+    const previous = archetypeDetails[retakeContext.previousLevel];
+    const summary = previous && retakeContext.previousScore != null
+        ? uiText.splash.retake_summary
+            .replace('{{score}}', Number(retakeContext.previousScore))
+            .replace('{{archetype}}', previous.name)
+        : uiText.splash.retake_generic;
+
+    return `
+        <div class="mb-6 bg-blue-900/40 border border-blue-500/40 rounded-lg p-4 text-left">
+            <p class="text-white font-semibold mb-1">${uiText.splash.retake_welcome.replace('{{name}}', name)}</p>
+            <p class="text-slate-300 text-sm">${summary}</p>
+        </div>
+    `;
+}
+
+// After a retake from an email link we already know who it is, so save the new score
+// straight away instead of asking for their email again.
+function maybeAutoSaveRetake() {
+    if (!retakeContext || !retakeContext.email) return;
+    document.getElementById('primary-cta').classList.add('hidden');
+    submitSignup(retakeContext.email, { auto: true });
+}
+
+// The signup box (which holds #subscribe-message) is hidden as soon as signup succeeds, so
+// the "you improved by N points" message is shown in a banner at the top of the next section.
+function showProgressMessage(text) {
+    let banner = document.getElementById('progress-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'progress-banner';
+        banner.className = 'mb-5 rounded-lg border border-green-500/40 bg-green-900/20 p-4 text-sm text-green-200 text-left';
+        const container = document.getElementById('secondary-ctas');
+        container.insertBefore(banner, container.firstChild);
+    }
+    banner.textContent = text;
+}
+
 function saveState() {
     localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(quizState));
 }
@@ -86,7 +184,8 @@ function populateText() {
 }
 
 // INITIALIZATION & THEME
-function initApp() {
+async function initApp() {
+    await loadRetakeContext();
     loadState();
     populateText();
     // Apply Dark Mode / Gamified Theme to Body
@@ -115,7 +214,8 @@ function createSplashScreen() {
             </div>
             <h1 class="text-4xl font-bold mb-2 text-white tracking-tight">${uiText.splash.title}</h1>
             <p class="text-slate-400 mb-8 text-lg">${uiText.splash.subtitle}</p>
-            
+            ${retakeBannerHtml()}
+
             <div class="grid grid-cols-2 gap-4 mb-8 text-left bg-slate-800 p-4 rounded-lg border border-slate-700">
                 <div class="flex items-center text-slate-300"><span class="mr-2">🧠</span> Psychology</div>
                 <div class="flex items-center text-slate-300"><span class="mr-2">🏠</span> Environment</div>
@@ -125,7 +225,7 @@ function createSplashScreen() {
 
             <div id="splash-screen-actions" class="w-full">
                 <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-lg transition-all transform hover:scale-105 shadow-lg shadow-blue-900/50 uppercase tracking-widest animate-pulse">
-                    ${hasSavedData ? uiText.splash.resume_button : uiText.splash.assessment_button}
+                    ${hasSavedData ? uiText.splash.resume_button : (retakeContext ? uiText.splash.retake_button : uiText.splash.assessment_button)}
                 </button>
             </div>
         </div>
@@ -147,7 +247,7 @@ function createSplashScreen() {
     resultContainer.classList.add('hidden');
 
     document.getElementById('start-btn').addEventListener('click', () => {
-        track('quiz_started', { resumed: hasSavedData });
+        track('quiz_started', { resumed: hasSavedData, retake: Boolean(retakeContext) });
         splash.classList.add('opacity-0', 'transition-opacity', 'duration-500');
         setTimeout(() => {
             splash.remove();
@@ -430,10 +530,12 @@ async function finishQuiz() {
         quizState.researchId = result.researchId;
         saveState(); // Save the researchId to localStorage
         displayResults(result.archetype, result.totalScore);
+        maybeAutoSaveRetake();
     } catch (error) {
         console.error("Error submitting score:", error);
         // Fallback: Show local results so the user isn't stuck
         displayResults(archetype, totalScore);
+        maybeAutoSaveRetake();
     } finally {
         nextBtn.textContent = uiText.quiz.finish_button;
         nextBtn.disabled = false;
@@ -610,8 +712,19 @@ function updateProfileCard(level, userScore, isUserResult, focusArea = null) {
 
 async function handleSubscription(event) {
     event.preventDefault();
-    track('signup_submitted');
-    const email = emailInput.value;
+    await submitSignup(emailInput.value);
+}
+
+// If the automatic save after a retake fails, fall back to the normal signup form (with the
+// email filled in) so the visitor can retry rather than silently losing their new score.
+function revealFormAfterFailedAutoSave(auto, email) {
+    if (!auto) return;
+    document.getElementById('primary-cta').classList.remove('hidden');
+    emailInput.value = email;
+}
+
+async function submitSignup(email, { auto = false } = {}) {
+    track('signup_submitted', { auto_retake: auto });
     const totalScore = quizState.answers.reduce((acc, score) => acc + score, 0);
     const archetype = getArchetype(totalScore);
 
@@ -647,7 +760,12 @@ async function handleSubscription(event) {
                 subscribeMessage.textContent = data.message;
             }
             subscribeMessage.classList.add('text-green-600');
-            track('signup_completed');
+            track('signup_completed', { auto_retake: auto });
+            showProgressMessage(subscribeMessage.textContent);
+
+            // The retake is recorded, so leave retake mode.
+            retakeContext = null;
+            try { sessionStorage.removeItem(RETAKE_STORAGE_KEY); } catch (error) { /* ignore */ }
 
             // Persisted separately from QUIZ_STORAGE_KEY (which gets cleared below)
             // so payment.html can pre-fill the Stripe Checkout email and guarantee
@@ -667,12 +785,14 @@ async function handleSubscription(event) {
             subscribeMessage.textContent = data.error || uiText.results.subscription.error;
             subscribeMessage.classList.add('text-red-600');
             console.error("Subscription failed:", data);
+            revealFormAfterFailedAutoSave(auto, email);
         }
     } catch (error) {
         track('signup_failed', { error_type: 'network' });
         console.error("Error subscribing:", error);
         subscribeMessage.textContent = uiText.results.subscription.error;
         subscribeMessage.classList.add('text-red-600');
+        revealFormAfterFailedAutoSave(auto, email);
     } finally {
         submitBtn.textContent = originalBtnText;
         submitBtn.disabled = false;

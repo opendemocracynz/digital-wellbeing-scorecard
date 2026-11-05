@@ -190,6 +190,14 @@ BEGIN
 END;
 $func$;
 
+-- Per-lead random token used in email links (retake + unsubscribe) so URLs never carry the email
+-- address. Existing rows each get their own value. Never expose it through an anon-callable
+-- RPC or endpoint: it is a bearer secret. (Needs applying in Supabase: see the retake-link notes.)
+ALTER TABLE public.marketing_leads
+  ADD COLUMN IF NOT EXISTS retake_token uuid NOT NULL DEFAULT gen_random_uuid();
+CREATE UNIQUE INDEX IF NOT EXISTS marketing_leads_retake_token_key
+  ON public.marketing_leads (retake_token);
+
 -- Lock mark_report_purchased to the service role (Postgres grants EXECUTE to PUBLIC by
 -- default). The anon key ships to browsers, so without this anyone could flag any email
 -- as purchased. unsubscribe_lead stays anon-callable: the email unsubscribe link needs it.

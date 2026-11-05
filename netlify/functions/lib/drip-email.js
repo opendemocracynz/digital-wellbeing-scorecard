@@ -4,6 +4,7 @@
 // narrative; the remaining stages are progress check-ins and a free poster offer.
 
 const { ARCHETYPES } = require('./archetypes');
+const { retakeUrl, unsubscribeUrl: buildUnsubscribeUrl } = require('./retake');
 
 const SITE_URL = 'https://digitalwellbeingscore.app';
 
@@ -33,10 +34,12 @@ function wrapEmail({ bodyHtml, unsubscribeUrl }) {
 </html>`;
 }
 
-function retakeButton(label) {
+// The link carries the lead's retake token, so the site opens in retake mode (shows their
+// last score, skips the email step) instead of a cold start.
+function retakeButton(label, lead) {
     return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
         <tr><td style="background-color:#3b82f6; border-radius: 8px;">
-            <a href="${SITE_URL}" style="display:inline-block; padding: 14px 28px; font-size: 14px; font-weight: bold; color:#fff; text-decoration:none; text-transform: uppercase; letter-spacing: 1px;">${label}</a>
+            <a href="${retakeUrl(lead && lead.retake_token)}" style="display:inline-block; padding: 14px 28px; font-size: 14px; font-weight: bold; color:#fff; text-decoration:none; text-transform: uppercase; letter-spacing: 1px;">${label}</a>
         </td></tr>
     </table>`;
 }
@@ -70,7 +73,7 @@ function buildStory1(lead) {
         <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">
             For now, notice one moment when you reach for your phone to avoid something else. Naming the habit is where my journey began.
         </p>
-        ${retakeButton('Revisit the Scorecard')}
+        ${retakeButton('Revisit the Scorecard', lead)}
         <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1; font-style: italic;">Next time: what actually changed.</p>
     `;
     return { subject, body };
@@ -89,7 +92,7 @@ function buildStory2(lead) {
             Eventually, going cold turkey helped too, but it was not permanent. The freedom I felt outdoors and playing with my family helped me put the old habits in context. Today I still use technology every day for work and to stay in touch, but it serves me and I am more often in control. The breaks matter, but the habits I use while I am online are what keep things in check.
         </p>
         <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">Your result points to a starting place, not a verdict. Try one boundary that protects the area you most want to change, then give it time to become familiar.</p>
-        ${retakeButton('Retake the Scorecard')}
+        ${retakeButton('Retake the Scorecard', lead)}
         <p style="font-size: 14px; line-height: 1.6; color:#cbd5e1;">We'll check in again in a month, and again in three, so you can see what has actually shifted.</p>
     `;
     return { subject, body };
@@ -108,7 +111,7 @@ function buildDay30(lead) {
             Retake the scorecard to see whether your ${archetype.name.toLowerCase()} habits have moved, and get an updated
             4-pillar breakdown.
         </p>
-        ${retakeButton('Retake the Scorecard')}
+        ${retakeButton('Retake the Scorecard', lead)}
     `;
     return { subject, body };
 }
@@ -123,7 +126,7 @@ function buildDay90(lead) {
             It's been three months since your Digital Wellbeing Score. Whatever's changed since — or hasn't — it's worth
             seeing where you stand now.
         </p>
-        ${retakeButton('Retake the Scorecard')}
+        ${retakeButton('Retake the Scorecard', lead)}
         <div style="background-color:#0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-top: 20px;">
             <p style="font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color:#eab308; margin: 0 0 6px; font-weight: bold;">A small thank-you</p>
             <p style="font-size: 13px; line-height: 1.5; color:#cbd5e1; margin: 0 0 10px;">
@@ -141,7 +144,7 @@ function buildDripEmail({ stage, lead }) {
     const builder = STAGE_BUILDERS[stage];
     if (!builder) throw new Error(`No email content defined for drip stage ${stage}`);
 
-    const unsubscribeUrl = `${SITE_URL}/.netlify/functions/unsubscribe?email=${encodeURIComponent(lead.email)}`;
+    const unsubscribeUrl = buildUnsubscribeUrl({ email: lead.email, token: lead.retake_token });
     const { subject, body } = builder(lead);
     const html = wrapEmail({ bodyHtml: body, unsubscribeUrl });
 

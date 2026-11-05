@@ -10,8 +10,26 @@ const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
 const FROM_EMAIL = 'hello@digitalwellbeingscore.app';
 const FROM_NAME = 'Digital Wellbeing Score';
 
+// The token is a bearer secret for this lead (unsubscribe / retake links), so it is read here
+// with the service role and goes only into the email sent to that address. Never add it to
+// the response: anyone can call this function with any email.
+async function getRetakeToken(email) {
+    try {
+        const { supabaseAdmin } = require('./lib/report-storage');
+        const { data } = await supabaseAdmin
+            .from('marketing_leads')
+            .select('retake_token')
+            .eq('email', email)
+            .maybeSingle();
+        return data?.retake_token || null;
+    } catch (error) {
+        return null;
+    }
+}
+
 async function sendWelcomeEmail({ email, totalScore, archetypeLevel, pillarScores }) {
-    const { subject, html, text } = buildWelcomeEmail({ totalScore, archetypeLevel, pillarScores, email });
+    const retakeToken = await getRetakeToken(email);
+    const { subject, html, text } = buildWelcomeEmail({ totalScore, archetypeLevel, pillarScores, email, retakeToken });
 
     const response = await fetch('https://api.mailersend.com/v1/email', {
         method: 'POST',

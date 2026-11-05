@@ -5,6 +5,15 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function page(message) {
     return `<!DOCTYPE html>
 <html>
@@ -29,24 +38,55 @@ exports.handler = async function (event) {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    const email = event.queryStringParameters && event.queryStringParameters.email;
-
-    if (!email) {
-        return {
-            statusCode: 400,
-            headers: { 'Content-Type': 'text/html' },
-            body: page("We couldn't find an email address to unsubscribe."),
-        };
-    }
+    const params = event.queryStringParameters || {};
+    const token = params.t;
+    let email = params.email;
 
     try {
+        // New emails link with a random token; older emails already sent still use ?email=.
+        if (token) {
+            const { isValidToken } = require('./lib/retake');
+            if (!isValidToken(token)) {
+                return {
+                    statusCode: 400,
+                    headers: { 'Content-Type': 'text/html' },
+                    body: page("This unsubscribe link isn't valid. Please use the link from your most recent email."),
+                };
+            }
+
+            const { supabaseAdmin } = require('./lib/report-storage');
+            const { data, error } = await supabaseAdmin
+                .from('marketing_leads')
+                .select('email')
+                .eq('retake_token', token)
+                .maybeSingle();
+            if (error) throw error;
+
+            if (!data) {
+                return {
+                    statusCode: 404,
+                    headers: { 'Content-Type': 'text/html' },
+                    body: page("This unsubscribe link isn't valid. Please use the link from your most recent email."),
+                };
+            }
+            email = data.email;
+        }
+
+        if (!email) {
+            return {
+                statusCode: 400,
+                headers: { 'Content-Type': 'text/html' },
+                body: page("We couldn't find an email address to unsubscribe."),
+            };
+        }
+
         const { error } = await supabase.rpc('unsubscribe_lead', { p_email: email });
         if (error) throw error;
 
         return {
             statusCode: 200,
             headers: { 'Content-Type': 'text/html' },
-            body: page(`You've been unsubscribed. ${email} will no longer receive emails from us.`),
+            body: page(`You've been unsubscribed. ${escapeHtml(email)} will no longer receive emails from us.`),
         };
     } catch (error) {
         return {
