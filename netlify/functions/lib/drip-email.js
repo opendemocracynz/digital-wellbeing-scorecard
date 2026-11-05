@@ -93,7 +93,7 @@ function recapBlock(archetype, score) {
 // Founder photos. Leave a path null until the image is uploaded to public/images/, so no email
 // ever ships with a broken image. (PREVIEW_PHOTOS=1 swaps in labelled placeholders for the preview.)
 const FOUNDER_PHOTOS = {
-    dark: null,   // e.g. '/images/founder-dark.jpg'   (display 280px wide, file 560x560)
+    dark: '/images/founder-dark.jpg',   // e.g. '/images/founder-dark.jpg'   (display 280px wide, file 560x560)
     happy: '/images/founder-happy.jpg',  // e.g. '/images/founder-happy.jpg'  (display 88px, file 264x264)
 };
 
