@@ -176,20 +176,34 @@ function renderQuestion() {
     
     optionsContainer.innerHTML = '';
 
-    question.options.forEach(option => {
+    question.options.forEach((option, optionIndex) => {
         const button = document.createElement('button');
-        button.textContent = option.text;
-        // Dark mode styling for options
-        button.className = 'w-full text-left p-4 border rounded-lg mb-3 transition-all duration-200 group';
+        // No bottom margin here: the container's space-y-4 already spaces the buttons, and its
+        // rule cancels a button's own margin on every button except the first, which made the
+        // gap after the first answer look bigger than the rest.
+        button.className = 'w-full text-left p-4 border rounded-lg transition-all duration-200 group flex items-start gap-3';
         button.classList.add('bg-slate-700', 'border-slate-600', 'text-slate-200', 'hover:bg-slate-600', 'hover:border-blue-400');
-        
+
+        const letter = document.createElement('span');
+        letter.className = 'flex-shrink-0 w-7 h-7 rounded-full border border-slate-500 text-xs font-bold flex items-center justify-center text-slate-300';
+        letter.textContent = String.fromCharCode(65 + optionIndex);
+
+        const label = document.createElement('span');
+        label.className = 'flex-1';
+        label.textContent = option.text;
+
+        button.append(letter, label);
         button.onclick = () => selectAnswer(option.score);
         if (quizState.answers[quizState.currentQuestionIndex] === option.score) {
             button.classList.remove('bg-slate-700', 'border-slate-600');
             button.classList.add('bg-blue-900', 'border-blue-500', 'text-white', 'ring-1', 'ring-blue-500');
+            letter.classList.remove('border-slate-500', 'text-slate-300');
+            letter.classList.add('bg-blue-500', 'border-blue-300', 'text-white');
         }
         optionsContainer.appendChild(button);
     });
+
+    reserveQuestionHeight();
 
     prevBtn.disabled = quizState.currentQuestionIndex === 0;
     
@@ -205,6 +219,32 @@ function renderQuestion() {
     nextBtn.onclick = nextQuestion;
     nextBtn.className = 'bg-blue-600 hover:bg-blue-500 text-white px-8 py-2 rounded-lg font-bold shadow-lg shadow-blue-900/20 transition-colors';
 }
+
+// Questions wrap to one or two (on narrow screens, more) lines. Reserve the height of the
+// longest one at the current width so the answers don't jump up and down between questions.
+function reserveQuestionHeight() {
+    const probe = questionText.cloneNode(false);
+    probe.removeAttribute('id');
+    probe.style.cssText = `position:absolute; visibility:hidden; pointer-events:none; height:auto; width:${questionText.clientWidth}px`;
+    questionText.parentNode.appendChild(probe);
+
+    let tallest = 0;
+    quizData.forEach((q) => {
+        probe.textContent = `${q.id}. ${q.question}`;
+        tallest = Math.max(tallest, probe.offsetHeight);
+    });
+    probe.remove();
+
+    questionText.style.minHeight = `${tallest}px`;
+}
+
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        if (!quizContainer.classList.contains('hidden')) reserveQuestionHeight();
+    }, 150);
+});
 
 function updateProgressBar() {
     let progressContainer = document.getElementById('progress-container');
@@ -444,9 +484,6 @@ function displayResults(archetype, totalScore) {
     // 3. Render the Main Profile Card (Defaults to user's result)
     updateProfileCard(archetype.level, totalScore, true, weakest);
     
-    // 4. Add Social Share Buttons
-    addShareButtons(archetype, totalScore);
-
     const submitBtn = subscribeForm.querySelector('button');
     submitBtn.textContent = uiText.results.claim_badge_button;
     submitBtn.className = "w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-green-900/20 transition-all";
@@ -539,6 +576,18 @@ function updateProfileCard(level, userScore, isUserResult, focusArea = null) {
     // Add "Get Full Report" Button (Payment Placeholder)
     const secondaryCtas = document.getElementById('secondary-ctas');
     if (secondaryCtas && !document.getElementById('payment-btn')) {
+        const pitch = document.createElement('div');
+        pitch.id = 'report-pitch';
+        pitch.className = 'text-left mb-5';
+        pitch.innerHTML = `
+            <h3 class="text-lg font-bold text-white mb-2">${uiText.results.report_pitch_title}</h3>
+            <p class="text-slate-300 text-sm mb-2">${uiText.results.report_pitch_intro}</p>
+            <ul class="list-disc pl-5 space-y-1 text-sm text-slate-300">
+                ${uiText.results.report_pitch_points.map((point) => `<li>${point}</li>`).join('')}
+            </ul>
+        `;
+        secondaryCtas.appendChild(pitch);
+
         const btn = document.createElement('a');
         btn.id = 'payment-btn';
         // No email in the URL: payment.html reads the saved lead email itself, at the moment
@@ -548,48 +597,15 @@ function updateProfileCard(level, userScore, isUserResult, focusArea = null) {
         btn.innerHTML = uiText.results.unlock_report_button;
         btn.addEventListener('click', () => track('report_cta_clicked', { archetype_level: level }));
         secondaryCtas.appendChild(btn);
+
+        const note = document.createElement('p');
+        note.className = 'text-center text-xs text-slate-400 mt-2';
+        note.textContent = uiText.results.report_one_time_note;
+        secondaryCtas.appendChild(note);
     }
 
     // If viewing a different level, show a "Back to my result" hint? 
     // For MVP, we just let them explore.
-}
-
-function addShareButtons(archetype, score) {
-    const containerId = 'share-buttons-container';
-    if (document.getElementById(containerId)) return;
-
-    const shareContainer = document.createElement('div');
-    shareContainer.id = containerId;
-    shareContainer.className = 'mt-8 mb-4 text-left';
-    
-    const shareMessage = uiText.results.share_message_template
-        .replace('{{score}}', score)
-        .replace('{{archetype}}', archetype.name);
-
-    shareContainer.innerHTML = `
-        <h3 class="text-lg font-bold mb-2">${uiText.results.share_title}</h3>
-        <textarea id="share-message" class="w-full p-2 border rounded-md bg-slate-700 text-slate-200" rows="3" readonly>${shareMessage}</textarea>
-        <button id="copy-btn" class="w-full mt-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors text-center shadow-lg">${uiText.results.copy_button}</button>
-        <p class="text-center text-xs text-slate-400 mt-1"><i>${uiText.results.share_via}</i></p>
-    `;
-    
-    const secondaryCtas = document.getElementById('secondary-ctas');
-    secondaryCtas.appendChild(shareContainer);
-
-    const copyBtn = document.getElementById('copy-btn');
-
-    copyBtn.onclick = () => {
-        track('share_clicked', { share_type: 'copy' });
-        navigator.clipboard.writeText(shareMessage).then(() => {
-            const originalText = copyBtn.innerHTML;
-            copyBtn.innerHTML = uiText.results.copied_button;
-            setTimeout(() => {
-                copyBtn.innerHTML = originalText;
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-        });
-    };
 }
 
 async function handleSubscription(event) {

@@ -25,13 +25,16 @@ const uiText = {
         "subscribe_button": "Subscribe",
         "claim_badge_button": "Claim Archetype Badge",
         "unsubscribe_info": "Unsubscribe at any time",
-        "share_title": "Challenge a Friend",
-        "copy_button": "Click to Copy",
-        "copied_button": "Copied!",
-        "share_via": "Share via email or social media",
+        "report_pitch_title": "Your full report",
+        "report_pitch_intro": "Get a report on your archetype that helps you:",
+        "report_pitch_points": [
+            "Understand the four pillars that make up your digital wellbeing",
+            "See what the research shows",
+            "Take on a 7-day challenge to actively improve your digital wellbeing"
+        ],
+        "report_one_time_note": "One-time purchase. Not a subscription.",
         "unlock_report_button": "🔓 Unlock Full Report",
         "viewing_profile_label": "Viewing Profile",
-        "share_message_template": "I just scored {{score}}/75 on the Digital Wellbeing Scorecard and my archetype is {{archetype}}. Find out yours!",
         "no_answers_warning": "Please answer at least one question to see your result.",
         "unanswered_warning": "You have skipped {{count}} questions.<br/>Unanswered questions will be scored as zero (Zombie Mode). Do you want to proceed?<br/>Click OK to submit, or Cancel to go back to the missed questions.",
         "subscription": {
