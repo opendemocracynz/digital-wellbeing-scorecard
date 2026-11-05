@@ -73,7 +73,7 @@ function determineTargetStage(lead, daysSince) {
 }
 
 async function runDrip() {
-    const baseColumns = 'email, last_research_id, archetype_segment, current_score, last_email_stage, quiz_completed_at, has_purchased_report, unsubscribed_from_sequences';
+    const baseColumns = 'email, first_name, last_research_id, archetype_segment, current_score, last_email_stage, quiz_completed_at, has_purchased_report, unsubscribed_from_sequences';
     const fetchLeads = (columns) => supabaseAdmin
         .from('marketing_leads')
         .select(columns)

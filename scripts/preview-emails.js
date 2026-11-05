@@ -20,7 +20,7 @@ const TOKEN = '3f2b8c1e-9a4d-4e7b-8c55-0d1f2a3b4c5d';
 const PILLARS_SOCIAL_WEAK = { Physiological: 6, Psychological: 18, Social: 3, Cognitive: 14 };
 const PILLARS_PHYSIO_WEAK = { Physiological: 2, Psychological: 20, Social: 7, Cognitive: 16 };
 
-const lead = (over = {}) => ({ email: 'sample@example.com', archetype_segment: 2, current_score: 38, retake_token: TOKEN, has_purchased_report: false, ...over });
+const lead = (over = {}) => ({ email: 'sample@example.com', first_name: 'Sam', archetype_segment: 2, current_score: 38, retake_token: TOKEN, has_purchased_report: false, ...over });
 
 const emails = [
     { id: 'welcome', label: 'Welcome (day 0)', note: 'Sent right after signup. Goal: the report sale.', ...buildWelcomeEmail({ totalScore: 38, archetypeLevel: 2, pillarScores: PILLARS_SOCIAL_WEAK, email: 'sample@example.com', retakeToken: TOKEN }) },
