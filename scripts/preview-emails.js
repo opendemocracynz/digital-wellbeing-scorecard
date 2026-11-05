@@ -5,6 +5,9 @@
 // Output goes to email-preview/ (git-ignored). Open email-preview/index.html.
 // Sample data only; nothing is sent and no environment variables are needed.
 
+// Show labelled photo placeholders so the layout can be judged before the real images exist.
+process.env.PREVIEW_PHOTOS = '1';
+
 const fs = require('fs');
 const path = require('path');
 const { buildWelcomeEmail } = require('../netlify/functions/lib/welcome-email');

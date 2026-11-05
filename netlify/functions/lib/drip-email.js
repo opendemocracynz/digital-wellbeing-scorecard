@@ -89,6 +89,49 @@ function recapBlock(archetype, score) {
     </table>`;
 }
 
+// Founder photos. Leave a path null until the image is uploaded to public/images/, so no email
+// ever ships with a broken image. (PREVIEW_PHOTOS=1 swaps in labelled placeholders for the preview.)
+const FOUNDER_PHOTOS = {
+    dark: null,   // e.g. '/images/founder-dark.jpg'   (display 280px wide, file 560x560)
+    happy: null,  // e.g. '/images/founder-happy.jpg'  (display 88px, file 264x264)
+};
+
+function placeholder(label, w, h, bg, fg) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="${bg}"/><text x="50%" y="50%" fill="${fg}" font-family="Arial" font-size="${Math.round(w / 14)}" text-anchor="middle" dominant-baseline="middle">${label}</text></svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+function photoSrc(key) {
+    if (process.env.PREVIEW_PHOTOS) {
+        return key === 'dark' ? placeholder('PHOTO: lit by screen glow', 560, 560, '#020617', '#64748b') : placeholder('PHOTO', 264, 264, '#fde68a', '#78350f');
+    }
+    return FOUNDER_PHOTOS[key] ? SITE_URL + FOUNDER_PHOTOS[key] : null;
+}
+
+// Small, centred, rounded: reads well on a phone and is deliberately too low-resolution to reuse.
+function darkPhoto() {
+    const src = photoSrc('dark');
+    if (!src) return '';
+    return `<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin: 8px auto 20px;"><tr><td>
+        <img src="${src}" width="280" style="display:block; width:280px; max-width:100%; height:auto; border-radius: 12px; border: 1px solid #334155;" alt="Rakesh, late at night, his face lit only by his phone screen">
+    </td></tr></table>`;
+}
+
+// Sign-off with a small friendly face, the trust anchor at the end of the email.
+function signOff() {
+    const src = photoSrc('happy');
+    const photo = src
+        ? `<td width="100" style="vertical-align: middle;"><img src="${src}" width="88" height="88" style="display:block; width:88px; height:88px; border-radius:50%; border: 2px solid #475569;" alt="Rakesh Pinao, smiling"></td>`
+        : '';
+    return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin: 24px 0 4px;"><tr>
+        ${photo}
+        <td style="vertical-align: middle;">
+            <div style="font-size: 15px; font-weight: bold; color:#fff;">Rakesh Pinao</div>
+            <div style="font-size: 12px; line-height: 1.5; color:#94a3b8;">Creator of the Digital Wellbeing Score<br>and a former Zombie Clickslave</div>
+        </td>
+    </tr></table>`;
+}
+
 function weakestFor(pillarScores) {
     try {
         return pillarScores ? getWeakestPillar(pillarScores) : null;
@@ -119,12 +162,14 @@ function buildStory1(lead, pillarScores) {
 
     const body = `
         ${para('I had high expectations of myself and big dreams for what I could achieve, so I was always giving it 110%. I told myself I was getting ahead: clearing a few extra emails from my phone after dinner, or doing a little more research before bed.')}
+        ${darkPhoto()}
         ${para('At first I barely noticed the change. Then I reached burnout, and the phone stopped being a tool for work. I started doomscrolling to avoid work instead. Midnight became 2am. I was not sleeping, but I was not really working either. Even when I put the phone down, my mind kept circling the same thoughts.')}
         ${para('I became angry and moody, and took it out on the people I cared about most. Slowly, and later than I wish I had, I realised I was trapped in endless information and using my screen to avoid the real world. I had lost countless hours of sleep, quality time, and productive time I would never get back. I felt trapped and alone, and I knew I needed to change, even though I did not yet know how.')}
         ${para('For now, notice one moment when you reach for your phone to avoid something else. Naming the habit is where my journey began.')}
         ${quickWin}
         ${reportLine}
         ${para('Next time: what actually changed.', 'font-style: italic;')}
+        ${signOff()}
     `;
     return { subject, preheader, body };
 }
@@ -147,6 +192,7 @@ function buildStory2(lead, pillarScores) {
         ${button('See your 7-day plan', links.report(level, campaign, 'report_button'), 'report')}
         ${para("It's a one-time purchase, not a subscription, and there's a 14-day refund if it isn't useful.", 'font-size: 12px; color:#94a3b8;')}
         ${para("We'll check in again in a month, and again in three, so you can see what has actually shifted.")}
+        ${signOff()}
         ${howItWorksTease(lead, campaign)}
     `;
     return { subject, preheader, body };
