@@ -87,11 +87,16 @@ AS $func$
 DECLARE
     v_count INTEGER;
     v_initial_score INTEGER;
+    v_prev_score INTEGER;
     v_physio INTEGER;
     v_psych INTEGER;
     v_social INTEGER;
     v_cognitive INTEGER;
 BEGIN
+    -- Their score before this submission, so score_diff means "since last time" (the ON CONFLICT
+    -- update below overwrites current_score, and initial_score is their very first attempt).
+    SELECT current_score INTO v_prev_score FROM marketing_leads WHERE email = p_email;
+
     INSERT INTO marketing_leads (
         email,
         archetype_segment,
@@ -132,7 +137,7 @@ BEGIN
             IF v_count > 1 THEN        RETURN jsonb_build_object(
             'status', 'updated',
             'message', 'Welcome back! Profile updated.',
-            'score_diff', (p_score - v_initial_score),
+            'score_diff', (p_score - COALESCE(v_prev_score, v_initial_score, p_score)),
             'score_physiological', v_physio,
             'score_psychological', v_psych,
             'score_social', v_social,

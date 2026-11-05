@@ -750,10 +750,17 @@ async function submitSignup(email, { auto = false } = {}) {
 
         if(response.ok) {
             // Handle Returning User Progress Message
-            if (data.status === 'updated' && data.score_diff !== undefined) {
+            // In retake mode we know their previous score, so compare against that. The server's
+            // score_diff is measured from their very first score, which isn't "last time".
+            let scoreDiff = data.score_diff;
+            if (auto && retakeContext && retakeContext.previousScore != null) {
+                scoreDiff = totalScore - Number(retakeContext.previousScore);
+            }
+
+            if (data.status === 'updated' && scoreDiff !== undefined && scoreDiff !== null) {
                 let msg = data.message;
-                if (data.score_diff > 0) msg = uiText.results.subscription.welcome_back_improved.replace('{{score_diff}}', data.score_diff);
-                else if (data.score_diff < 0) msg = uiText.results.subscription.welcome_back_declined.replace('{{score_diff}}', Math.abs(data.score_diff));
+                if (scoreDiff > 0) msg = uiText.results.subscription.welcome_back_improved.replace('{{score_diff}}', scoreDiff);
+                else if (scoreDiff < 0) msg = uiText.results.subscription.welcome_back_declined.replace('{{score_diff}}', Math.abs(scoreDiff));
                 else msg = uiText.results.subscription.welcome_back_unchanged;
                 subscribeMessage.textContent = msg;
             } else {
