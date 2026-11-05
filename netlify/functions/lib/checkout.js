@@ -1,9 +1,9 @@
-const { resolvePriceId, currencyForRequest, taxBehaviorFor, REPORT_AMOUNT } = require('./lib/pricing');
+const { resolvePriceId, currencyForRequest, taxBehaviorFor, REPORT_AMOUNT } = require('./pricing');
 
 const SITE_URL = (process.env.URL || process.env.SITE_URL || 'http://localhost:8888').replace(/\/+$/, '');
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-exports.handler = async function (event) {
+exports.createCheckout = async function (event) {
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
