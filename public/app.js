@@ -210,7 +210,7 @@ function createSplashScreen() {
         <div class="max-w-md w-full text-center p-6">
             <div class="mb-8 relative flex justify-center items-center">
                 <div class="w-32 h-32 bg-blue-500 rounded-full opacity-20 animate-pulse absolute"></div>
-                <img src="/images/dws-welcome.jpg" class="welcome-image object-contain relative z-10" alt="Digital Wellbeing">
+                <img src="/images/dws-welcome.png" class="welcome-image object-contain relative z-10" alt="Digital Wellbeing">
             </div>
             <h1 class="text-4xl font-bold mb-2 text-white tracking-tight">${uiText.splash.title}</h1>
             <p class="text-slate-400 mb-8 text-lg">${uiText.splash.subtitle}</p>
