@@ -17,12 +17,12 @@ function retakeUrl(token) {
     return isValidToken(token) ? `${SITE_URL}/?r=${token}` : SITE_URL;
 }
 
-// Falls back to the email form for leads without a token (or if the column isn't there yet),
-// so an email never ships with a broken unsubscribe link.
-function unsubscribeUrl({ email, token }) {
+// The old ?email= link is retired. A lead without a token (shouldn't happen: the column is
+// NOT NULL) gets a mailto so an email never ships without a working way to opt out.
+function unsubscribeUrl({ token }) {
     return isValidToken(token)
         ? `${SITE_URL}/.netlify/functions/unsubscribe?t=${token}`
-        : `${SITE_URL}/.netlify/functions/unsubscribe?email=${encodeURIComponent(email)}`;
+        : 'mailto:hello@digitalwellbeingscore.app?subject=Unsubscribe';
 }
 
 module.exports = { isValidToken, retakeUrl, unsubscribeUrl };

@@ -40,45 +40,29 @@ exports.handler = async function (event) {
 
     const params = event.queryStringParameters || {};
     const token = params.t;
-    let email = params.email;
+
+    // Links identify the lead by their random token only. The old ?email= form is retired:
+    // anyone could unsubscribe any address just by knowing it.
+    const invalid = (statusCode) => ({
+        statusCode,
+        headers: { 'Content-Type': 'text/html' },
+        body: page("This unsubscribe link isn't valid. Please use the link from your most recent email, or reply to it and we'll remove you."),
+    });
 
     try {
-        // New emails link with a random token; older emails already sent still use ?email=.
-        if (token) {
-            const { isValidToken } = require('./lib/retake');
-            if (!isValidToken(token)) {
-                return {
-                    statusCode: 400,
-                    headers: { 'Content-Type': 'text/html' },
-                    body: page("This unsubscribe link isn't valid. Please use the link from your most recent email."),
-                };
-            }
+        const { isValidToken } = require('./lib/retake');
+        if (!isValidToken(token)) return invalid(400);
 
-            const { supabaseAdmin } = require('./lib/report-storage');
-            const { data, error } = await supabaseAdmin
-                .from('marketing_leads')
-                .select('email')
-                .eq('retake_token', token)
-                .maybeSingle();
-            if (error) throw error;
+        const { supabaseAdmin } = require('./lib/report-storage');
+        const { data, error: lookupError } = await supabaseAdmin
+            .from('marketing_leads')
+            .select('email')
+            .eq('retake_token', token)
+            .maybeSingle();
+        if (lookupError) throw lookupError;
+        if (!data) return invalid(404);
 
-            if (!data) {
-                return {
-                    statusCode: 404,
-                    headers: { 'Content-Type': 'text/html' },
-                    body: page("This unsubscribe link isn't valid. Please use the link from your most recent email."),
-                };
-            }
-            email = data.email;
-        }
-
-        if (!email) {
-            return {
-                statusCode: 400,
-                headers: { 'Content-Type': 'text/html' },
-                body: page("We couldn't find an email address to unsubscribe."),
-            };
-        }
+        const email = data.email;
 
         const { error } = await supabase.rpc('unsubscribe_lead', { p_email: email });
         if (error) throw error;
