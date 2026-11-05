@@ -10,5 +10,21 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
 
+# Extensionless URLs for the policy/help pages (linked from Stripe and the footer).
+[[redirects]]
+  from = "/help"
+  to = "/help.html"
+  status = 200
+
+[[redirects]]
+  from = "/policy"
+  to = "/policy.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms"
+  to = "/terms.html"
+  status = 200
+
 [dev]
   publish = "public"

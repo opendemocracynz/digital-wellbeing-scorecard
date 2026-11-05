@@ -43,6 +43,12 @@
         <button id="checkout-btn" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all mb-4" disabled>
             Pay
         </button>
+
+        <p class="text-xs text-slate-500">
+            <a class="underline hover:text-slate-300" href="/help">Help</a> &middot;
+            <a class="underline hover:text-slate-300" href="/policy">Privacy</a> &middot;
+            <a class="underline hover:text-slate-300" href="/terms">Terms</a>
+        </p>
     </div>
 
     <script type="module">
@@ -56,7 +62,12 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const level = urlParams.get('level');
-        const email = urlParams.get('email');
+        // The lead email is saved by the quiz page (same origin), so it doesn't need to travel
+        // in the URL where it would end up in logs, history and analytics. The query param
+        // is only a fallback for older links.
+        let storedEmail = null;
+        try { storedEmail = localStorage.getItem('digitalWellbeingLeadEmail'); } catch (error) { /* storage blocked */ }
+        const email = storedEmail || urlParams.get('email');
         const status = urlParams.get('status');
         const sessionId = urlParams.get('session_id');
         const checkoutBtn = document.getElementById('checkout-btn');
