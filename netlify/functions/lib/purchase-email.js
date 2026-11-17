@@ -52,7 +52,7 @@ function buildPurchaseEmail({ level, sessionId }) {
 
     <tr><td style="padding: 24px 20px 0; text-align:center;">
         <p style="font-size: 11px; color:#64748b; margin: 0 0 4px;">Digital Wellbeing Score &middot; digitalwellbeingscore.app</p>
-        <p style="font-size: 11px; color:#64748b; margin: 0;">&copy; 2026 Open Democracy NZ</p>
+        <p style="font-size: 11px; color:#64748b; margin: 0;">&copy; 2026 Legitimise This!</p>
     </td></tr>
 </table>
 </td></tr>
@@ -73,7 +73,7 @@ Good luck!
 Rakesh Pinao
 
 Digital Wellbeing Score - digitalwellbeingscore.app
-(c) 2026 Open Democracy NZ`;
+(c) 2026 Legitimise This!`;
 
     return { subject, html, text };
 }

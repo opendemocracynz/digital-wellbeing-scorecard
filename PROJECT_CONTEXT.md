@@ -1,7 +1,7 @@
 # PROJECT CONTEXT: Digital Wellbeing Scorecard
 
 **Mission:** Rapid deployment of a standalone tool to assess a user's relationship with technology.
-**Parent Organization:** Open Democracy NZ (ODNZ).
+**Parent Organization:** Legitimise This! (formerly Open Democracy NZ, same NZBN).
 **Goal:** Generate leads (email list) and revenue (paid reports) to fund broader democratic initiatives.
 **Live URL:** https://digitalwellbeingscore.app
 **Dev Constraints:** ~5 hours/week. Solutions must be low-maintenance, low-code, automated where possible.

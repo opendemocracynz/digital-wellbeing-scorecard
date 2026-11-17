@@ -30,7 +30,7 @@ function wrapEmail({ bodyHtml, unsubscribeUrl, preheader }) {
 
     <tr><td style="padding: 24px 20px 0; text-align:center;">
         <p style="font-size: 11px; color:#64748b; margin: 0 0 4px;">Digital Wellbeing Score &middot; digitalwellbeingscore.app</p>
-        <p style="font-size: 11px; color:#64748b; margin: 0;">&copy; 2026 Open Democracy NZ &middot; <a href="${unsubscribeUrl}" style="color:#64748b;">Unsubscribe</a></p>
+        <p style="font-size: 11px; color:#64748b; margin: 0;">&copy; 2026 Legitimise This! &middot; <a href="${unsubscribeUrl}" style="color:#64748b;">Unsubscribe</a></p>
         <p style="font-size: 11px; line-height: 1.5; color:#64748b; margin: 12px 0 0;">This email is automated, but a real person reads the replies. We'd love to hear what you think of digitalwellbeingscore.app. We can't offer personal advice.</p>
     </td></tr>
 </table>
@@ -285,7 +285,7 @@ function buildDripEmail({ stage, lead, pillarScores = null }) {
     const { subject, preheader, body } = builder(lead, pillarScores);
     const html = wrapEmail({ bodyHtml: body, unsubscribeUrl, preheader });
 
-    const text = `${htmlToText(body)}\n\n--\nDigital Wellbeing Score - digitalwellbeingscore.app\n(c) 2026 Open Democracy NZ\nUnsubscribe: ${unsubscribeUrl}\n\nThis email is automated, but a real person reads the replies. We'd love to hear what you think of digitalwellbeingscore.app. We can't offer personal advice.`;
+    const text = `${htmlToText(body)}\n\n--\nDigital Wellbeing Score - digitalwellbeingscore.app\n(c) 2026 Legitimise This!\nUnsubscribe: ${unsubscribeUrl}\n\nThis email is automated, but a real person reads the replies. We'd love to hear what you think of digitalwellbeingscore.app. We can't offer personal advice.`;
     return { subject, html, text };
 }
 
