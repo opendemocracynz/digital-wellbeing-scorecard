@@ -72,6 +72,7 @@ module.exports = {
     DEFAULT_CURRENCY,
     REPORT_AMOUNT,
     currencyForRequest,
+    getCountry,
     resolvePriceId,
     taxBehaviorFor,
 };

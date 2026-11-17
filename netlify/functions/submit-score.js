@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 // IMPORTANT: Set these environment variables in your Netlify project settings
 const { createClient } = require('@supabase/supabase-js');
+const { getCountry } = require('./lib/pricing');
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -91,6 +92,7 @@ exports.handler = async function(event, context) {
         const pillarScores = getPillarScores(answers);
         const answer_string = answers.join('');
         const researchId = crypto.randomUUID();
+        const country = getCountry(event.headers);
 
         // Generate the id ourselves and skip .select() after insert: RLS has no
         // SELECT policy on research_data (by design, to keep results private),
@@ -107,6 +109,8 @@ exports.handler = async function(event, context) {
                     score_psychological: pillarScores.Psychological,
                     score_social: pillarScores.Social,
                     score_cognitive: pillarScores.Cognitive,
+                    // Two-letter country from Netlify's geo header (not the IP address), for regional analysis.
+                    country_code: /^[A-Z]{2}$/.test(country || '') ? country : null,
                 }
             ]);
 
