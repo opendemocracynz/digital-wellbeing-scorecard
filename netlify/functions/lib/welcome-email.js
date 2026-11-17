@@ -101,7 +101,7 @@ function buildWelcomeEmail({ totalScore, archetypeLevel, pillarScores, email, re
     <tr><td style="padding: 24px 20px 0; text-align:center;">
         <p style="font-size: 11px; color:#64748b; margin: 0 0 4px;">Digital Wellbeing Score &middot; digitalwellbeingscore.app</p>
         <p style="font-size: 11px; color:#64748b; margin: 0 0 4px;">You received this email because you completed the Digital Wellbeing Score.</p>
-        <p style="font-size: 11px; color:#64748b; margin: 0;">&copy; 2026 Legitimise This! &middot; <a href="${unsubscribeUrl}" style="color:#64748b;">Unsubscribe</a></p>
+        <p style="font-size: 11px; color:#64748b; margin: 0;">&copy; 2026 Legitimise This Limited &middot; <a href="${unsubscribeUrl}" style="color:#64748b;">Unsubscribe</a></p>
         <p style="font-size: 11px; line-height: 1.5; color:#64748b; margin: 12px 0 0;">This email is automated, but a real person reads the replies. We'd love to hear what you think of digitalwellbeingscore.app. We can't offer personal advice.</p>
     </td></tr>
 </table>
@@ -139,7 +139,7 @@ Rakesh Pinao
 
 Digital Wellbeing Score - digitalwellbeingscore.app
 You received this email because you completed the Digital Wellbeing Score.
-(c) 2026 Legitimise This!
+(c) 2026 Legitimise This Limited
 Unsubscribe: ${unsubscribeUrl}
 
 This email is automated, but a real person reads the replies. We'd love to hear what you think of digitalwellbeingscore.app. We can't offer personal advice.`;
